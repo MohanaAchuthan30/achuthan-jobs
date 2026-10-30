@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.0 — 2026-10-30
+
+- Rebranded the plugin author and all user-facing plugin text to **Achuthan**.
+- Updated applicant emails, Careers and native job headings, HR Dashboard and recruitment privacy tool labels.
+- Renamed the visible recruiter role label while preserving user role IDs and all database keys.
+- New installations default notification email to the WordPress administrator address; existing settings remain unchanged.
+- Kept existing data, job permalinks, shortcodes, and application workflows.
+
+
 ## 0.11.0 — 2026-10-30
 
 - Canonical job routes: `/careers/{slug}/`, with legacy redirect.

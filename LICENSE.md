@@ -1,15 +1,15 @@
 # Proprietary notice — Achuthan Jobs
 
-Copyright © 2026 Achuthan. All rights reserved, to the extent the
-relevant rights are owned by Achuthan.
+Copyright © 2026 Big Box Studio. All rights reserved, to the extent the
+relevant rights are owned by Big Box Studio.
 
 **Private / internal use.** This repository is intended for authorized
-Achuthan personnel and approved contractors. No general permission
+Big Box Studio personnel and approved contractors. No general permission
 to copy, publish, redistribute, sublicense, or make this repository public
 is granted by this notice. External access or distribution requires prior
 written authorization from the rights holder.
 
-This notice governs only code that Achuthan is entitled to license.
+This notice governs only code that Big Box Studio is entitled to license.
 It does **not** override third-party licenses, applicable law, or rights
 previously granted under earlier licenses. Earlier Achuthan Jobs packages
 contained a `GPL-2.0-or-later` plugin header; changing that header for
@@ -19,3 +19,8 @@ obligations before external distribution or commercial sublicensing.
 
 The repository being private is an **access-control setting**, not a
 substitute for an appropriate legal license.
+
+**Branding note (v0.12.0):** The software product is now displayed as
+**Achuthan Jobs** with author label **Achuthan**. Changing an interface
+label does not by itself transfer copyright ownership; historical ownership
+and license obligations remain subject to the above notice.

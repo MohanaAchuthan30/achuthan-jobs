@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$ROOT/plugin/achuthan-jobs"
-OUT="$ROOT/dist/achuthan-jobs-v0.11.0-private.zip"
+OUT="$ROOT/dist/achuthan-jobs-v0.12.0-private.zip"
 mkdir -p "$ROOT/dist"
 command -v python3 >/dev/null || { echo "Python3 is needed for packaging" >&2; exit 2; }
 python3 - "$SRC" "$OUT" <<'PYBUILD'

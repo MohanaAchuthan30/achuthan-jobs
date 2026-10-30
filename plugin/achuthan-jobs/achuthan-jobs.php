@@ -1,30 +1,31 @@
 <?php
 /**
  * Plugin Name: Achuthan Jobs
- * Description: Secure job listings, candidate applications and a private recruitment dashboard for Big Box Studio.
- * Version: 0.11.0
+ * Description: Private recruitment dashboard, job postings and applicant management for Achuthan.
+ * Version: 0.12.0
  * Requires at least: 6.2
  * Requires PHP: 8.0
  * License: Proprietary (internal use only)
- * Author: Big Box Studio
+ * Author: Achuthan
  * Text Domain: achuthan-jobs
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
-// The previous Big Box Studio Careers build used the same internal class/data.
+// Preserve the legacy class and data migration guard from older careers builds.
 // Avoid crashing WordPress if someone accidentally activates both packages.
 if ( class_exists( 'BBS_Careers', false ) ) {
     add_action( 'admin_notices', static function () {
         if ( current_user_can( 'activate_plugins' ) ) {
-            echo '<div class="notice notice-error"><p><strong>Achuthan Jobs:</strong> Deactivate the old Big Box Studio Careers plugin. Only one recruitment plugin may run at a time.</p></div>';
+            echo '<div class="notice notice-error"><p><strong>Achuthan Jobs:</strong> Deactivate the previous Careers plugin. Only one recruitment plugin may run at a time.</p></div>';
         }
     } );
     return;
 }
 
 final class Achuthan_Jobs {
-    const VERSION = '0.11.0';
+    const VERSION = '0.12.0';
     const MAX_CSV_BYTES = 1048576;
     const MAX_CSV_ROWS = 100;
+    // Legacy internal identifiers are intentionally retained for upgrade safety.
     const CPT = 'bbs_job';
     const CAP = 'manage_bbs_applicants';
     const MAX_RESUME = 3145728; // 3 MB, stored encrypted in the private database.
@@ -161,16 +162,25 @@ final class Achuthan_Jobs {
         foreach ( array('administrator','bbs_recruiter') as $role_name ) {
             $role = get_role($role_name);
             if (!$role && $role_name === 'bbs_recruiter') {
-                $role = add_role('bbs_recruiter', 'BBS Recruiter', array('read'=>true));
+                $role = add_role('bbs_recruiter', 'Achuthan Recruiter', array('read'=>true));
             }
             if ($role) { foreach ($caps as $cap) { $role->add_cap($cap); } }
+        }
+        // Update the display label only. Keep bbs_recruiter as a legacy role ID
+        // so existing recruiter memberships and capabilities remain intact.
+        $roles = wp_roles();
+        if ( $roles && isset($roles->roles['bbs_recruiter']) &&
+             ($roles->roles['bbs_recruiter']['name'] ?? '') !== 'Achuthan Recruiter' ) {
+            $roles->roles['bbs_recruiter']['name'] = 'Achuthan Recruiter';
+            $roles->role_names['bbs_recruiter'] = 'Achuthan Recruiter';
+            update_option($roles->role_key, $roles->roles);
         }
         // By default the existing /careers/ WordPress page is rendered by the
         // plugin. Elementor content is not used for this single public URL.
         // Turn this off in Settings to use a shortcode inside Elementor instead.
         if ( false === get_option('aj_own_careers_page', false) ) add_option('aj_own_careers_page', '1', '', false);
         if ( false === get_option('bbs_retention_days', false) ) add_option('bbs_retention_days', 180);
-        if ( false === get_option('bbs_hr_email', false) ) add_option('bbs_hr_email', 'business@bigboxstudio.in');
+        if ( false === get_option('bbs_hr_email', false) ) add_option('bbs_hr_email', get_option('admin_email'));
         if ( ! wp_next_scheduled('bbs_daily_cleanup') ) wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'bbs_daily_cleanup');
         flush_rewrite_rules();
     }
@@ -246,7 +256,7 @@ final class Achuthan_Jobs {
         wp_nonce_field('bbs_save_job_' . $post->ID,'bbs_job_nonce');
         $fields = array('department'=>'Department','location'=>'Location','type'=>'Employment type','experience'=>'Experience','salary'=>'Salary (optional)','deadline'=>'Applications close (optional)');
         echo '<p>Publish the WordPress job to make it visible. Set <strong>Closed</strong> to immediately hide it from listings and disable applications.</p>';
-        echo '<p><label for="aj_job_code"><strong>Job ID</strong></label><br><input type="text" name="aj_job_code" id="aj_job_code" maxlength="30" style="width:100%;max-width:320px" pattern="[A-Za-z0-9-]{3,30}" value="'.esc_attr(self::job_code($post->ID)).'"><br><small>Unique Job ID, e.g. AJ-000123 or BBS-MKT-2026. 3–30 letters, numbers or hyphens.</small></p><div class="bbs-meta-grid">';
+        echo '<p><label for="aj_job_code"><strong>Job ID</strong></label><br><input type="text" name="aj_job_code" id="aj_job_code" maxlength="30" style="width:100%;max-width:320px" pattern="[A-Za-z0-9-]{3,30}" value="'.esc_attr(self::job_code($post->ID)).'"><br><small>Unique Job ID, e.g. AJ-000123 or AJ-MKT-2026. 3–30 letters, numbers or hyphens.</small></p><div class="bbs-meta-grid">';
         foreach ($fields as $key => $label) {
             $val = get_post_meta($post->ID, '_bbs_'.$key, true);
             echo '<p><label for="bbs_'.$key.'"><strong>'.esc_html($label).'</strong></label><br>';
@@ -315,11 +325,11 @@ final class Achuthan_Jobs {
     public static function shortcode() {
         self::enqueue_front_assets();
         ob_start();
-        echo '<section class="bbs-careers" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'" aria-label="Big Box Studio careers powered by Achuthan Jobs">';
-        echo '<div class="bbs-hero"><div class="bbs-eyebrow"><span class="bbs-dot"></span> BIG BOX STUDIO / CAREERS</div><h1>Find your place<br>to <em>think big.</em></h1><p>Great ideas need people who care. Explore opportunities to build brands, shape experiences and create meaningful work.</p><a href="#bbs-openings" class="bbs-hero-link">Explore open positions '.self::arrow_svg().'</a><div class="bbs-hero-art" aria-hidden="true"><span></span><span></span><span></span></div></div>';
+        echo '<section class="bbs-careers" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'" aria-label="Achuthan careers powered by Achuthan Jobs">';
+        echo '<div class="bbs-hero"><div class="bbs-eyebrow"><span class="bbs-dot"></span> ACHUTHAN / CAREERS</div><h1>Find your place<br>to <em>create more.</em></h1><p>Great ideas need people who care. Explore opportunities to build brands, shape experiences and create meaningful work.</p><a href="#bbs-openings" class="bbs-hero-link">Explore open positions '.self::arrow_svg().'</a><div class="bbs-hero-art" aria-hidden="true"><span></span><span></span><span></span></div></div>';
         echo '<div class="bbs-culture"><div><span class="bbs-overline">THE CULTURE</span><h2>Creative thinking.<br>Real impact.</h2></div><p>We bring together strategy, design, packaging and digital execution. Different skills, one shared ambition: make standout work.</p></div>';
         echo self::render_list();
-        echo '<div class="bbs-bottom"><span class="bbs-overline">OUR PEOPLE MAKE THE WORK</span><h2>Different minds.<br>One big idea.</h2><p>See what we create together.</p><a href="'.esc_url(home_url('/works/')).'">Explore our work '.self::arrow_svg().'</a></div></section>';
+        echo '<div class="bbs-bottom"><span class="bbs-overline">OUR PEOPLE MAKE THE WORK</span><h2>Different minds.<br>One shared vision.</h2><p>See what we create together.</p><a href="'.esc_url(home_url('/works/')).'">Explore our work '.self::arrow_svg().'</a></div></section>';
         return ob_get_clean();
     }
     /** Server-side output for SEO plus an uncached AJAX refresh for the live Careers page. */
@@ -371,7 +381,7 @@ final class Achuthan_Jobs {
         wp_send_json_success(array('html'=>Achuthan_Questions::render($id,true)));
     }
     public static function document_title($parts) {
-        if (is_singular(self::CPT)) $parts['title'] = get_the_title() . ' — Careers at Big Box Studio';
+        if (is_singular(self::CPT)) $parts['title'] = get_the_title() . ' — Careers at Achuthan';
         return $parts;
     }
     public static function job_content($content) {
@@ -379,7 +389,7 @@ final class Achuthan_Jobs {
         self::enqueue_front_assets();
         $id=get_the_ID();
         $fields=array('department'=>'Department','location'=>'Location','type'=>'Job type','experience'=>'Experience','salary'=>'Compensation','deadline'=>'Apply by');
-        $out='<div class="bbs-careers bbs-detail" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'"><a class="bbs-back" href="'.esc_url(home_url('/careers/')).'">← All opportunities</a><p class="bbs-overline">BIG BOX STUDIO / OPPORTUNITY</p><div class="bbs-details-meta">';
+        $out='<div class="bbs-careers bbs-detail" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'"><a class="bbs-back" href="'.esc_url(home_url('/careers/')).'">← All opportunities</a><p class="bbs-overline">ACHUTHAN / OPPORTUNITY</p><div class="bbs-details-meta">';
         foreach($fields as $key=>$label) {
             $val=self::job_meta($id,$key);
             if($val) $out.='<div><small>'.esc_html($label).'</small><strong>'.esc_html($val).'</strong></div>';
@@ -414,7 +424,7 @@ final class Achuthan_Jobs {
         }
         $out.='<label>Resume (PDF only, max 3 MB) *<input type="file" name="resume" required accept=".pdf,application/pdf"></label>';
         $privacy=get_privacy_policy_url();
-        $text='I agree to Big Box Studio processing my application and CV for recruitment purposes';
+        $text='I agree to Achuthan processing my application and CV for recruitment purposes';
         $out.='<label class="bbs-consent"><input type="checkbox" name="bbs_consent" value="1" required><span>'.esc_html($text).($privacy?' under its <a target="_blank" rel="noopener" href="'.esc_url($privacy).'">privacy policy</a>':'').'.</span></label>';
         $out.='<button type="submit">Submit application '.self::arrow_svg().'</button><p class="bbs-form-note">Please do not include ID proofs, bank information or other sensitive documents.</p></form></div>';
         return $out;
@@ -484,7 +494,7 @@ final class Achuthan_Jobs {
         }
         if($failed){$wpdb->query('ROLLBACK');self::apply_redirect($id,'error');}
         $wpdb->query('COMMIT');
-        $notify=get_option('bbs_hr_email','business@bigboxstudio.in');
+        $notify=get_option('bbs_hr_email',get_option('admin_email'));
         foreach($inserted as $new){
             self::audit('application_submitted',$new['application'],'validated');
             if(is_email($notify)&&!wp_mail($notify,'New job application ['.self::job_code($new['job']).']: '.get_the_title($new['job']),
@@ -493,7 +503,7 @@ final class Achuthan_Jobs {
         }
         if($inserted){
             $titles=array_map(static function($item){return get_the_title($item['job']);},$inserted);
-            if(!wp_mail($email,'Applications received — Big Box Studio',"Hi ".$name.",\n\nWe received your application for: ".implode(', ',$titles).".\n\nBig Box Studio"))
+            if(!wp_mail($email,'Applications received — Achuthan',"Hi ".$name.",\n\nWe received your application for: ".implode(', ',$titles).".\n\nAchuthan"))
                 update_option('achuthan_jobs_mail_failed_at',$now,false);
         }
         self::apply_redirect($id,'success');
@@ -617,7 +627,7 @@ final class Achuthan_Jobs {
         echo '<section class="aj-white-card aj-compose-card" id="aj-compose"><div class="aj-panel-heading"><div><h2>Email applicant</h2><p>Write directly to '.esc_html($person->full_name).' ('.esc_html($person->email).') about '.esc_html(get_the_title($person->job_id)).'.</p></div><a href="'.esc_url($base).'">Close ×</a></div>';
         echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'" class="aj-compose-form"><input type="hidden" name="action" value="aj_candidate_email"><input type="hidden" name="return_to" value="dashboard"><input type="hidden" name="id" value="'.esc_attr($person->id).'">';
         wp_nonce_field('aj_candidate_email_'.$person->id);
-        echo '<label><strong>Subject</strong><input type="text" required maxlength="150" name="subject" value="Regarding your application to Big Box Studio"></label>';
+        echo '<label><strong>Subject</strong><input type="text" required maxlength="150" name="subject" value="Regarding your application to Achuthan"></label>';
         echo '<label><strong>Message to '.esc_html($person->full_name).'</strong><textarea name="body" required maxlength="5000" rows="7" placeholder="Hi '.esc_attr($person->full_name).',"></textarea></label>';
         echo '<p class="description">Messages are sent via your WordPress email service. Configure and test SMTP before using with real candidates.</p><button class="button button-primary" type="submit">Send email to applicant</button></form></section>';
     }
@@ -645,7 +655,7 @@ final class Achuthan_Jobs {
         $careers=get_page_by_path('careers');
         $careers_link=$careers?get_permalink($careers):home_url('/careers/');
         echo '<div class="wrap bbs-admin aj-dashboard">';
-        echo '<div class="aj-hero"><div class="aj-hero-top"><span class="aj-monogram" aria-hidden="true">aj.</span><div><strong>ACHUTHAN JOBS</strong><span>BIG BOX STUDIO · HUMAN RESOURCES</span></div><span class="aj-workspace-tag"><span class="aj-status-dot"></span> PRIVATE HR WORKSPACE</span></div>';
+        echo '<div class="aj-hero"><div class="aj-hero-top"><span class="aj-monogram" aria-hidden="true">aj.</span><div><strong>ACHUTHAN JOBS</strong><span>ACHUTHAN · HUMAN RESOURCES</span></div><span class="aj-workspace-tag"><span class="aj-status-dot"></span> PRIVATE HR WORKSPACE</span></div>';
         echo '<div class="aj-hero-main"><div><p class="aj-kicker">RECRUITMENT CONTROL CENTER</p><h1>'.esc_html($title).'<span class="aj-lime-period">.</span></h1><p>'.esc_html($sub).'</p></div>';
         echo '<div class="aj-hero-actions"><a class="button button-primary" href="'.esc_url(admin_url('post-new.php?post_type='.self::CPT)).'"><span class="dashicons dashicons-plus-alt2" aria-hidden="true"></span> Post a job</a>';
         echo '<a class="button" href="'.esc_url($apps_link).'">View applications <span aria-hidden="true">↗</span></a></div></div></div>';
@@ -737,7 +747,7 @@ final class Achuthan_Jobs {
         $total=(int)$wpdb->get_var($args?$wpdb->prepare("SELECT COUNT(*) FROM $table WHERE $where",$args):"SELECT COUNT(*) FROM $table WHERE $where");
         $sql="SELECT id, job_id, full_name, email, stage, created_at, interview_at, candidate_rating FROM $table WHERE $where ORDER BY created_at DESC LIMIT %d OFFSET %d";
         $rows=$wpdb->get_results($wpdb->prepare($sql,array_merge($args,array($per,($page-1)*$per))));
-        echo '<div class="wrap bbs-admin"><div class="bbs-admin-head"><p>BIG BOX STUDIO / HR</p><h1>Applications</h1><span>'.esc_html($total).' candidate records match your filters</span></div>';
+        echo '<div class="wrap bbs-admin"><div class="bbs-admin-head"><p>ACHUTHAN / HR</p><h1>Applications</h1><span>'.esc_html($total).' candidate records match your filters</span></div>';
         echo '<form method="get" class="bbs-table-filter"><input type="hidden" name="page" value="bbs-applicants"><input type="search" name="s" value="'.esc_attr($q).'" placeholder="Search name or email"><select name="stage"><option value="">All stages</option>';
         foreach(self::stages() as $key=>$label) echo '<option value="'.esc_attr($key).'" '.selected($status,$key,false).'>'.esc_html($label).'</option>';
         echo '</select><button class="button button-primary">Filter</button></form>';
@@ -786,7 +796,7 @@ final class Achuthan_Jobs {
         echo '</select></label><label><strong>Offer salary (HR private)</strong><input type="text" maxlength="100" name="offer_salary" value="'.esc_attr($r->offer_salary).'" /></label><label><strong>Proposed joining date</strong><input type="date" name="joining_date" value="'.esc_attr($r->joining_date).'" /></label><label><strong>Private HR notes</strong><textarea rows="12" name="notes">'.esc_textarea($r->notes).'</textarea></label><button class="button button-primary">Save candidate</button></form>';
         echo '<hr><h2>Contact candidate</h2><p>Send a manual message to the candidate. No automated rejection, offer, or interview emails are sent when you change stages.</p><form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="aj_candidate_email"><input type="hidden" name="id" value="'.esc_attr($id).'">';
         wp_nonce_field('aj_candidate_email_'.$id);
-        echo '<label><strong>Subject</strong><input type="text" name="subject" required maxlength="150" value="Regarding your application to Big Box Studio"></label><label><strong>Message</strong><textarea name="body" rows="6" maxlength="5000" required></textarea></label><button class="button">Send candidate email</button></form>';
+        echo '<label><strong>Subject</strong><input type="text" name="subject" required maxlength="150" value="Regarding your application to Achuthan"></label><label><strong>Message</strong><textarea name="body" rows="6" maxlength="5000" required></textarea></label><button class="button">Send candidate email</button></form>';
         echo '<hr><form method="post" action="'.esc_url(admin_url('admin-post.php')).'" onsubmit="return confirm(\'Permanently delete this application, its resume and custom attachments? Other applications by this person will remain. This cannot be undone.\');"><input type="hidden" name="action" value="bbs_delete_applicant"><input type="hidden" name="id" value="'.esc_attr($id).'">';
         wp_nonce_field('bbs_delete_'.$id);
         echo '<button type="submit" class="button button-link-delete">Permanently delete application</button></form></div></div></div>';
@@ -1109,7 +1119,7 @@ final class Achuthan_Jobs {
 
     public static function settings() {
         self::require_hr();
-        $email=get_option('bbs_hr_email','business@bigboxstudio.in');
+        $email=get_option('bbs_hr_email',get_option('admin_email'));
         $days=(int)get_option('bbs_retention_days',180);
         echo '<div class="wrap bbs-admin"><div class="bbs-admin-head"><p>ACHUTHAN JOBS / SETTINGS</p><h1>Recruitment settings</h1></div><div class="bbs-panel" style="max-width:640px"><form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="bbs_save_settings">';
         wp_nonce_field('bbs_save_settings');
@@ -1150,9 +1160,9 @@ final class Achuthan_Jobs {
         $types=array('Full-time'=>'FULL_TIME','Part-time'=>'PART_TIME','Contract'=>'CONTRACTOR','Internship'=>'INTERN','Temporary'=>'TEMPORARY');
         $data=array('@context'=>'https://schema.org','@type'=>'JobPosting','title'=>get_the_title($id),
             'description'=>wp_strip_all_tags(get_post_field('post_content',$id)),
-            'identifier'=>array('@type'=>'PropertyValue','name'=>'Big Box Studio','value'=>self::job_code($id)),
+            'identifier'=>array('@type'=>'PropertyValue','name'=>'Achuthan','value'=>self::job_code($id)),
             'datePosted'=>get_the_date('c',$id),
-            'hiringOrganization'=>array('@type'=>'Organization','name'=>'Big Box Studio','sameAs'=>home_url('/')),
+            'hiringOrganization'=>array('@type'=>'Organization','name'=>'Achuthan','sameAs'=>home_url('/')),
             'employmentType'=>$types[$type]??'FULL_TIME',
             'directApply'=>true,
         );
@@ -1163,7 +1173,7 @@ final class Achuthan_Jobs {
         echo '<script type="application/ld+json">'.wp_json_encode($data,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>';
     }
     public static function privacy_eraser_register($erasers) {
-        $erasers['bbs-applications']=array('eraser_friendly_name'=>'Big Box Studio job applications','callback'=>array(__CLASS__,'privacy_erase'));
+        $erasers['bbs-applications']=array('eraser_friendly_name'=>'Achuthan job applications','callback'=>array(__CLASS__,'privacy_erase'));
         return $erasers;
     }
     public static function privacy_erase($email,$page=1) {
@@ -1174,7 +1184,7 @@ final class Achuthan_Jobs {
         return array('items_removed'=>$deleted!==false && $deleted>0,'items_retained'=>false,'messages'=>array(),'done'=>true);
     }
     public static function privacy_export_register($exporters) {
-        $exporters['bbs-applications']=array('exporter_friendly_name'=>'Big Box Studio job applications','callback'=>array(__CLASS__,'privacy_export'));
+        $exporters['bbs-applications']=array('exporter_friendly_name'=>'Achuthan job applications','callback'=>array(__CLASS__,'privacy_export'));
         return $exporters;
     }
     public static function privacy_export($email,$page=1) {

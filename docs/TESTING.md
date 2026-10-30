@@ -1,6 +1,6 @@
 # Testing and release checklist
 
-The current package is v0.11.0 **staging**. The embedded mock smoke test is
+The current package is v0.12.0 **staging**. The embedded mock smoke test is
 useful but does not prove server security or production correctness.
 
 ## Automated checks

@@ -7,7 +7,7 @@ get_header();
 <?php while (have_posts()) : the_post(); ?>
 <article <?php post_class('aj-native-job'); ?> id="job-<?php the_ID(); ?>">
   <header class="aj-native-job-header">
-    <p class="aj-native-job-label">BIG BOX STUDIO / CAREERS / JOB OPENING</p>
+    <p class="aj-native-job-label">ACHUTHAN / CAREERS / JOB OPENING</p>
     <h1><?php the_title(); ?></h1>
     <p>Explore the role below and submit your application directly to our recruitment team.</p>
   </header>

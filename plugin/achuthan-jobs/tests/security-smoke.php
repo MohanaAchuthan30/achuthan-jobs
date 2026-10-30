@@ -76,7 +76,7 @@ require dirname(__DIR__).'/achuthan-jobs.php';
 $pass=0;
 function check($condition,$message){global $pass; if(!$condition){fwrite(STDERR,"FAIL: $message\n");exit(1);} $pass++; echo "PASS: $message\n";}
 function private_call($method,...$args){$r=new ReflectionMethod(Achuthan_Jobs::class,$method);return $r->invoke(null,...$args);}
-check(Achuthan_Jobs::VERSION==='0.11.0','Version registered');
+check(Achuthan_Jobs::VERSION==='0.12.0','Version registered');
 check(isset($GLOBALS['hooks']['shortcode_achuthan_jobs']),'Shortcode registered');
 check(isset($GLOBALS['hooks']['wp_ajax_nopriv_aj_live_jobs']),'Public jobs refresh endpoint registered');
 check(isset($GLOBALS['hooks']['wp_ajax_nopriv_aj_extra_questions']),'Public additional job questions endpoint registered');

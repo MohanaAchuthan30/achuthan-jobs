@@ -1,6 +1,6 @@
 # Achuthan Jobs
 
-**Private repository • Achuthan • WordPress plugin • v0.11.0 (staging)**
+**Private repository • Achuthan • WordPress plugin • v0.12.0 (staging)**
 
 > This is a **private source repository**, not an open-source release or a
 > production security certification. Keep GitHub repository visibility set to
@@ -9,7 +9,7 @@
 
 Achuthan Jobs manages WordPress job postings, applications, candidate files,
 interviews, recruiter communications, job-specific questions, and the public
-Careers page at `/careers/`.
+Careers page at `/careers/`. All public and HR interface labels now use **Achuthan**; existing database and URL identifiers are preserved.
 
 ## Project structure
 
@@ -83,3 +83,11 @@ achuthan-jobs-private-github/
 - Verify license obligations before distributing the plugin outside the team.
 
 See [LICENSE.md](LICENSE.md), [SECURITY.md](SECURITY.md) and [testing](docs/TESTING.md).
+
+## Branding and backward compatibility (v0.12.0)
+
+- Plugin header, HR dashboard, job pages, Careers copy, application consent, email subjects and recruitment privacy tools now say **Achuthan** instead of the previous brand.
+- Existing role ID `bbs_recruiter`, job post type `bbs_job`, `bbs_` database tables, options, CSS classes, actions and legacy shortcode are **not renamed**: doing so would disconnect existing users, jobs and applications.
+- New installations use the WordPress administrator email for recruitment notifications. **Existing email settings are never overwritten on upgrade.** Check the notification address in Achuthan Jobs → Settings.
+- If your legal employer or data controller has a name different from Achuthan, update the job posting organisation and privacy notice to accurately describe it before recruiting.
+- Historical copyright and prior GPL rights remain governed by LICENSE.md and are not silently changed by rebranding.

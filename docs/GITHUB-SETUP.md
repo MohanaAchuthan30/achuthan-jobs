@@ -17,7 +17,7 @@ license. The source has a historical GPL license caveat (see `LICENSE.md`).
 git init
 git branch -M main
 git add .
-git commit -m "Initial private Achuthan Jobs v0.11.0 source"
+git commit -m "Initial private Achuthan Jobs v0.12.0 source"
 git remote add origin https://github.com/YOUR-ACCOUNT/achuthan-jobs.git
 git push -u origin main
 ```
@@ -33,7 +33,7 @@ Authenticate using `gh auth login`, then inside the extracted folder:
 ```bash
 git init
 git add .
-git commit -m "Initial private Achuthan Jobs v0.11.0 source"
+git commit -m "Initial private Achuthan Jobs v0.12.0 source"
 git branch -M main
 gh repo create achuthan-jobs --private --source=. --remote=origin --push
 ```
@@ -63,7 +63,7 @@ bash scripts/verify.sh
 bash scripts/build-plugin.sh
 ```
 
-Output: `dist/achuthan-jobs-v0.11.0-private.zip` (upload to staging WP).
+Output: `dist/achuthan-jobs-v0.12.0-private.zip` (upload to staging WP).
 The `.gitignore` excludes `dist/` so built ZIPs are not accidentally committed.
 
 ## How updates work

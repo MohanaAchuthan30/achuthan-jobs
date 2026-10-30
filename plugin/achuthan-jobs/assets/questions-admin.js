@@ -1,0 +1,12 @@
+(function(){'use strict';
+function start(){var container=document.getElementById('aj-question-builder'),button=document.getElementById('aj-add-question'),template=document.getElementById('aj-question-template');if(!container||!button||!template)return;
+var next=container.querySelectorAll('.aj-question-row').length;
+function update(row){var select=row.querySelector('.aj-question-type'),choice=row.querySelector('.aj-choice-section'),file=row.querySelector('.aj-file-section');if(!select)return;choice.hidden=!['select','radio','checkbox'].includes(select.value);file.hidden=select.value!=='file';}
+function assignId(row){var el=row.querySelector('.aj-question-id');if(el&&!el.value){var bytes=new Uint8Array(9);if(window.crypto&&crypto.getRandomValues)crypto.getRandomValues(bytes);else{for(var i=0;i<bytes.length;i++)bytes[i]=Math.floor(Math.random()*256)}el.value='q_'+Array.from(bytes).map(function(b){return b.toString(16).padStart(2,'0')}).join('');}}
+button.addEventListener('click',function(){if(container.querySelectorAll('.aj-question-row').length>=15){window.alert('Maximum 15 questions per job.');return}var node=template.content.cloneNode(true),wrap=document.createElement('div');wrap.appendChild(node);wrap.querySelectorAll('[name]').forEach(function(input){input.name=input.name.replace(/__INDEX__/g,String(next))});var row=wrap.querySelector('.aj-question-row');container.appendChild(row);assignId(row);update(row);next++;row.querySelector('input[name$="[label]"]').focus()});
+container.addEventListener('click',function(e){var remove=e.target.closest('.aj-remove-question');if(remove){if(window.confirm('Remove this question from future applications? Previously submitted answers remain in the HR dashboard.'))remove.closest('.aj-question-row').remove()}});
+container.addEventListener('change',function(e){if(e.target.matches('.aj-question-type'))update(e.target.closest('.aj-question-row'))});
+container.querySelectorAll('.aj-question-row').forEach(update);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();

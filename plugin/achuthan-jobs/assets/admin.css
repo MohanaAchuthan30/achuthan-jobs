@@ -1,0 +1,112 @@
+.bbs-admin{font-family:system-ui,-apple-system,Arial,sans-serif;max-width:1580px;padding:10px 12px 60px 0;color:#1d231b}
+.bbs-admin-head{background:#fff;border:1px solid #e8ebe5;padding:28px 34px;margin:15px 0 25px;border-radius:5px}
+.bbs-admin-head p{font-size:11px;letter-spacing:.16em;font-weight:700;color:#76805e;margin:0 0 7px}
+.bbs-admin-head h1{font-size:32px!important;font-weight:650!important;letter-spacing:-.05em!important;margin:0 0 10px!important;padding:0!important;color:#1a2016!important}
+.bbs-admin-head span{color:#6d7668}
+.bbs-admin .button-primary{background:#d9ed1b!important;border-color:#bdcf16!important;color:#1c2115!important;font-weight:600}
+.bbs-admin .button-primary:hover{background:#e3ff04!important}
+.bbs-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:20px 0}
+.bbs-stats>div{background:#fff;border:1px solid #e8ebe5;padding:24px;border-radius:5px}
+.bbs-stats strong{font-size:33px;font-weight:650;letter-spacing:-.05em;display:block}
+.bbs-stats span{font-size:12px;color:#707970}
+.bbs-actions{margin-bottom:40px}
+.bbs-board{display:grid;grid-template-columns:repeat(7,minmax(165px,1fr));gap:11px;overflow:auto;padding-bottom:15px}
+.bbs-stage{background:#f4f5f1;padding:10px;border:1px solid #e6e9df;border-radius:6px;min-height:230px}
+.bbs-stage h3{font-size:13px;margin:8px 5px 16px;display:flex;justify-content:space-between}
+.bbs-stage h3 span{font-weight:400;color:#697468}
+.bbs-stage>a{display:block;padding:13px;background:#fff;border:1px solid #e3e7df;border-radius:4px;margin:8px 0;color:#151a13;text-decoration:none}
+.bbs-stage>a:hover{border-color:#9eb800}
+.bbs-stage>a b{font-size:12px;display:block}.bbs-stage>a small{font-size:11px;color:#7c8179;display:block;margin-top:4px}
+.bbs-none{font-size:11px;color:#92988d;padding:12px}
+.bbs-table-filter{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0}
+.bbs-table-filter input{min-width:220px;padding:4px 12px}
+.bbs-table td{vertical-align:middle;padding:15px 10px!important}
+.bbs-table small{display:block;color:#797f75;margin-top:4px}
+.bbs-pill{background:#eef5d3;border-radius:20px;padding:5px 12px;font-size:12px}
+.bbs-pages{margin-top:20px;display:flex;gap:5px}
+.bbs-person-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.bbs-panel{background:#fff;border:1px solid #e8ebe5;border-radius:5px;padding:27px}
+.bbs-panel h2{margin:0 0 24px}
+.bbs-panel dl{display:grid;grid-template-columns:100px 1fr;gap:12px 16px}
+.bbs-panel dt{font-size:12px;font-weight:650;color:#646d5e}.bbs-panel dd{margin:0;overflow-wrap:anywhere;line-height:1.75}
+.bbs-panel label{display:block;margin:0 0 20px}.bbs-panel label strong{display:block;margin:0 0 9px}
+.bbs-panel label input,.bbs-panel label select,.bbs-panel label textarea{display:block;width:100%;max-width:100%;margin-top:5px;padding:8px}
+.bbs-meta-grid{display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:0 20px}
+.bbs-meta-grid input,.bbs-meta-grid select{max-width:100%}
+@media(max-width:1000px){.bbs-stats{grid-template-columns:repeat(2,1fr)}.bbs-person-grid{grid-template-columns:1fr}}
+@media(max-width:500px){.bbs-stats,.bbs-meta-grid{grid-template-columns:1fr}.bbs-admin-head{padding:20px}.bbs-table{display:block;overflow:auto}}
+
+/* Achuthan Jobs v0.6: modern HR workspace. Scoped so WordPress/Elementor stay unaffected. */
+.aj-dashboard{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#202820;max-width:1580px}
+.aj-dashboard *{box-sizing:border-box}
+.aj-hero{border:1px solid #e7ebe2;border-radius:11px;background:#fff;padding:24px 28px 27px;margin-top:17px}
+.aj-hero-top{display:flex;align-items:center;gap:11px;padding-bottom:27px;border-bottom:1px solid #edf0e9}
+.aj-monogram{background:#e3ff04;color:#192014;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:9px;font-size:24px;font-weight:850;letter-spacing:-.085em}
+.aj-hero-top>div{display:flex;flex-direction:column;gap:3px}.aj-hero-top>div strong{font-size:12px;letter-spacing:.06em}.aj-hero-top>div span{font-size:10px;color:#9ca397;letter-spacing:.09em}
+.aj-workspace-tag{margin-left:auto;display:inline-flex;align-items:center;gap:7px;border:1px solid #e3ead7;border-radius:40px;padding:7px 10px;color:#62764b;font-size:10px;font-weight:700;letter-spacing:.045em}
+.aj-status-dot{width:7px;height:7px;background:#7fa800;border-radius:50%}
+.aj-hero-main{display:flex;justify-content:space-between;align-items:end;gap:24px;padding-top:26px}
+.aj-kicker{font-size:10px!important;font-weight:750;color:#8a9681!important;letter-spacing:.17em;margin:0 0 7px!important}
+.aj-hero-main h1{font-size:clamp(29px,3vw,41px)!important;line-height:1.17!important;margin:0!important;font-weight:750!important;letter-spacing:-.06em!important;color:#19221a!important}
+.aj-lime-period{color:#a7ca00}.aj-hero-main p:not(.aj-kicker){color:#838f81;margin:10px 0 0;font-size:13px}
+.aj-hero-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.aj-dashboard .aj-hero-actions .button{height:auto;min-height:39px;padding:5px 16px;display:inline-flex;align-items:center;gap:8px;border-radius:7px;background:#fff;border-color:#dce2d7;color:#2e382b;font-weight:650}
+.aj-dashboard .aj-hero-actions .button-primary{background:#e3ff04!important;border-color:#e3ff04!important;color:#1d2619!important}
+.aj-hero-actions .dashicons{font-size:16px;width:16px;height:16px}
+.aj-dashboard-tabs{display:flex;gap:28px;margin:20px 0 19px;padding:0 5px;border-bottom:1px solid #e5eae0;overflow-x:auto}
+.aj-dashboard-tabs a{display:block;padding:10px 0 13px;color:#858d81;text-decoration:none;font-size:12px;font-weight:650;white-space:nowrap;border-bottom:2px solid transparent}
+.aj-dashboard-tabs a.active{color:#252d23;border-color:#acc900}.aj-dashboard-tabs a:focus-visible{outline:2px solid #829e00;outline-offset:3px}
+.aj-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:18px 0}
+.aj-metric{background:#fff;border:1px solid #e6ebe2;border-radius:10px;padding:19px 20px;min-width:0}.aj-metric.aj-green{background:#f5fae5;border-color:#e5efc3}
+.aj-metric-top{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#7b8579;font-size:12px}.aj-metric .dashicons{color:#afb8a9;font-size:17px}
+.aj-metric strong{display:block;color:#17211a;font-size:37px;letter-spacing:-.07em;line-height:1.2;font-weight:750;margin-top:15px}.aj-metric-hint{font-size:10px;color:#a0a99a}
+.aj-dashboard-grid{display:grid;grid-template-columns:minmax(0,1.62fr) minmax(290px,1fr);gap:14px;margin:14px 0}.aj-dashboard-grid.aj-bottom-grid{grid-template-columns:minmax(0,1.6fr) minmax(290px,1fr)}
+.aj-white-card{border:1px solid #e7ece4;background:#fff;border-radius:10px;min-width:0;overflow:hidden}
+.aj-panel-heading{padding:20px 20px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #f1f3ee}
+.aj-panel-heading h2{font-size:16px;letter-spacing:-.035em;font-weight:750;color:#1a241d;margin:0 0 5px}
+.aj-panel-heading p{font-size:11px;color:#929c90;margin:0}.aj-text-link{color:#576748!important;text-decoration:none;font-size:11px;font-weight:650;white-space:nowrap}
+.aj-data-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}.aj-data-table th{text-align:left;color:#a3aca0;letter-spacing:.04em;font-size:10px;font-weight:700;background:#fdfefb;padding:13px 17px;border-bottom:1px solid #eef1eb}
+.aj-data-table td{padding:14px 17px;border-bottom:1px solid #eff2ec;color:#596458}.aj-data-table tbody tr:last-child td{border-bottom:0}.aj-data-table tbody tr:hover{background:#fafcf5}
+.aj-table-scroll{overflow:auto}.aj-person{color:#273328;font-weight:700;text-decoration:none}.aj-person:hover{color:#607e00}
+.aj-icon-link{font-size:17px;font-weight:600;color:#6c8067;text-decoration:none}.aj-stage-badge{background:#e9f3fd;border-radius:30px;padding:5px 9px;font-size:10px;font-weight:700;color:#557aa7}
+.aj-stage-badge.aj-stage-hired{background:#e0f6e5;color:#34814a}.aj-stage-badge.aj-stage-interview{background:#eee9fb;color:#785ab4}.aj-stage-badge.aj-stage-screening{background:#e5f5ed;color:#49876a}.aj-stage-badge.aj-stage-offer,.aj-stage-badge.aj-stage-shortlisted{background:#fff5d9;color:#9e7b2e}.aj-stage-badge.aj-stage-rejected{background:#faecee;color:#a7575d}
+.aj-stage-overview{padding:12px 20px 20px}.aj-stage-progress{display:block;text-decoration:none;padding:8px 0 9px}.aj-progress-label{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#5c695b;margin-bottom:6px}.aj-progress-label strong{color:#212f22}
+.aj-progress-track{display:block;background:#eef1e8;height:5px;border-radius:9px;overflow:hidden}.aj-progress-track>span{display:block;height:100%;background:#b9d637;border-radius:9px;min-width:0}
+.aj-job-mini{display:flex;gap:9px;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f3ee;padding:14px 20px}.aj-job-mini:last-child{border:0}.aj-job-mini a{color:#273328;text-decoration:none;font-weight:700;font-size:12px}.aj-job-mini small{display:block;color:#99a397;font-size:10px;margin-top:5px}.aj-job-state{border-radius:20px;background:#edf5dd;padding:5px 9px;font-size:10px;color:#617843;font-weight:750}
+.aj-empty{text-align:center;padding:32px 16px;color:#9aa39a}.aj-empty b{display:block;color:#536250;margin-top:10px;font-size:13px}.aj-empty p{font-size:11px}.aj-empty .dashicons{font-size:28px;width:28px;height:28px;color:#b9c4b2}
+.aj-footer-links{display:flex;gap:18px;flex-wrap:wrap;margin:22px 2px}.aj-footer-links a{font-size:11px;font-weight:700;text-decoration:none;color:#6d7b61}
+.aj-dashboard-alert{border:1px solid #f4d8a9;background:#fff9ed;padding:14px 17px;border-radius:8px;color:#76591e;font-size:12px}
+.aj-pipeline-card{margin:12px 0}.aj-kanban{display:grid;grid-template-columns:repeat(7,minmax(186px,1fr));gap:10px;padding:13px;overflow-x:auto}.aj-kanban-lane{background:#f8faf6;border:1px solid #ebefe8;border-radius:9px;min-height:265px;padding:11px}.aj-lane-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.aj-lane-title h3{font-size:12px;margin:0}.aj-lane-title span{font-size:11px;background:#e8eee2;padding:3px 7px;border-radius:15px}
+.aj-candidate-tile{background:#fff;border:1px solid #e2e8dc;border-radius:7px;padding:12px;margin:8px 0;display:block;text-decoration:none;color:#2b372c}.aj-candidate-tile:hover{border-color:#afcf2e}.aj-candidate-tile strong{display:block;font-size:12px}.aj-candidate-tile small{display:block;color:#96a192;font-size:10px;margin:6px 0}.aj-candidate-tile>span{font-size:10px;color:#6d8954}.aj-lane-empty{font-size:11px;color:#a3ada0;margin-top:18px}.aj-board-hint{font-size:11px;color:#98a395;padding:1px 18px 16px}
+@media(max-width:1199px){.aj-dashboard-grid,.aj-dashboard-grid.aj-bottom-grid{grid-template-columns:1fr}.aj-kanban{grid-template-columns:repeat(7,190px)}}
+@media(max-width:781px){.aj-hero-main{align-items:start;flex-direction:column}.aj-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aj-dashboard{padding-right:8px}}
+@media(max-width:480px){.aj-hero{padding:18px}.aj-hero-top{align-items:start}.aj-workspace-tag{font-size:0;padding:8px}.aj-workspace-tag .aj-status-dot{width:9px;height:9px}.aj-summary-grid{gap:8px}.aj-metric{padding:13px}.aj-metric strong{font-size:29px}.aj-metric-top{font-size:10px}.aj-hero-main h1{font-size:30px!important}.aj-panel-heading{padding:15px}.aj-stage-overview{padding:9px 15px 17px}.aj-footer-links{gap:13px}}
+/* v0.7: scope Poppins to the private Achuthan Jobs workspace. */
+.bbs-admin,.bbs-admin *, .aj-dashboard,.aj-dashboard *, .bbs-meta-grid,.bbs-meta-grid *, .aj-compose-card,.aj-compose-card *{font-family:'Poppins',sans-serif!important}
+.aj-compose-card{padding:22px 25px;margin:18px 0;background:white;border:1px solid #e8ebe5;border-radius:7px}
+.aj-compose-form{max-width:780px;display:grid;gap:14px;margin-top:16px}
+.aj-compose-form label{display:flex;flex-direction:column;gap:7px;font-size:13px}
+.aj-compose-form input,.aj-compose-form textarea{width:100%;padding:11px 12px;border:1px solid #d8ded2;border-radius:5px;font:inherit}
+.aj-compose-form .button{width:max-content;min-height:40px}
+.aj-mail-action{font-size:11px!important;padding:0 8px!important;min-height:25px!important;line-height:24px!important}
+/* Achuthan Jobs v0.8: consistent Poppins across the recruitment workspace and job editor. */
+.bbs-admin,.bbs-admin *,.aj-dashboard,.aj-dashboard *,#aj-question-builder,#aj-question-builder *,#aj-add-question,.post-type-bbs_job #poststuff,.post-type-bbs_job #poststuff input,.post-type-bbs_job #poststuff button,.post-type-bbs_job #poststuff select,.post-type-bbs_job #poststuff textarea{font-family:'Poppins',sans-serif!important}
+.aj-builder-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(160px,1fr);gap:14px}
+.aj-question-row label{display:block}.aj-question-row label strong{display:block;margin-bottom:7px}
+.aj-choice-section,.aj-file-section{margin-top:12px}.aj-choice-section[hidden],.aj-file-section[hidden]{display:none!important}
+@media(max-width:650px){.aj-builder-grid{grid-template-columns:1fr}}
+
+/* v0.10: secure in-dashboard PDF/image previews; compact applicant actions. */
+.aj-preview-form,.aj-private-download{display:inline-flex;vertical-align:middle;align-items:center;margin:2px 7px 3px 0}
+.aj-preview-form .button,.aj-private-download .button{margin:0}
+.aj-preview-modal[hidden]{display:none!important}
+.aj-preview-modal{position:fixed;z-index:100200;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;font-family:'Poppins',sans-serif}
+.aj-preview-shade{position:absolute;inset:0;background:rgba(20,28,18,.78)}
+.aj-preview-panel{position:relative;z-index:1;width:min(1040px,100%);height:min(86vh,940px);border-radius:12px;background:#fff;box-shadow:0 18px 65px #1115;display:flex;flex-direction:column;overflow:hidden}
+.aj-preview-heading{padding:13px 18px;border-bottom:1px solid #e8ede3;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.aj-preview-heading strong{font-size:15px;display:block}.aj-preview-heading small{font-size:11px;color:#6d7968;word-break:break-all;display:block}
+#aj-private-document-frame{display:block;flex:1;border:0;width:100%;min-height:150px;background:#f6f8f5}
+.aj-preview-footnote{font-size:11px;color:#65705f;padding:10px 18px;margin:0!important}
+.aj-delete-single-form{display:none}
+.aj-delete-row{font-size:12px!important}
+body.aj-preview-active{overflow:hidden}
+@media(max-width:782px){.aj-preview-modal{padding:6px}.aj-preview-panel{height:96vh}.aj-preview-heading{padding:10px}.aj-preview-footnote{font-size:10px}}

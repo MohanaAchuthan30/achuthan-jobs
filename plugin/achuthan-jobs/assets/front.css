@@ -1,0 +1,131 @@
+.bbs-careers{--bbs-ink:#191a17;--bbs-mute:#74776d;--bbs-border:#e8e9e4;--bbs-lime:#e3ff04;color:var(--bbs-ink);background:#fff;font-family:Poppins,Arial,sans-serif;font-size:15px;line-height:1.7;width:100%;max-width:100%;overflow:hidden;box-sizing:border-box}
+.bbs-careers *,.bbs-careers *::before,.bbs-careers *::after{box-sizing:border-box}
+.bbs-careers h1,.bbs-careers h2,.bbs-careers h3,.bbs-careers p{margin-top:0}
+.bbs-careers a{color:inherit;text-decoration:none}
+.bbs-careers .bbs-overline,.bbs-careers .bbs-eyebrow{letter-spacing:.14em;font-size:11px;font-weight:600;text-transform:uppercase;color:#55594e}
+.bbs-careers .bbs-hero{position:relative;min-height:585px;padding:88px max(5%,30px) 96px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;background:#fafbf8;isolation:isolate}
+.bbs-careers .bbs-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#a0bc00;margin-right:12px}
+.bbs-careers .bbs-hero h1{font-size:clamp(54px,7.1vw,118px);line-height:1.05;letter-spacing:-.078em;font-weight:600;max-width:900px;margin:30px 0 25px;position:relative;z-index:1}
+.bbs-careers .bbs-hero h1 em{font-style:normal;position:relative;white-space:nowrap}
+.bbs-careers .bbs-hero h1 em:before{content:'';position:absolute;z-index:-1;left:0;right:0;bottom:.1em;height:.19em;background:var(--bbs-lime);border-radius:2px}
+.bbs-careers .bbs-hero p{font-size:clamp(15px,1.5vw,19px);max-width:550px;color:#53564e;line-height:1.8;margin-bottom:27px;position:relative;z-index:1}
+.bbs-careers .bbs-hero-link,.bbs-careers .bbs-bottom a{display:inline-flex;gap:26px;align-items:center;padding:14px 19px;background:var(--bbs-lime);font-size:13px;font-weight:600;border:1px solid #d1e800;border-radius:3px;position:relative;z-index:2;transition:transform .25s,background .25s}
+.bbs-careers .bbs-hero-link:hover,.bbs-careers .bbs-bottom a:hover{transform:translateY(-3px);background:#d6ed00}
+.bbs-careers .bbs-hero-art{position:absolute;width:clamp(170px,27vw,380px);height:clamp(170px,27vw,380px);right:8%;top:21%;opacity:.38;z-index:0;pointer-events:none;transform:rotate(-18deg)}
+.bbs-careers .bbs-hero-art span{position:absolute;border:1px solid #b8c1aa;inset:0;transform:rotate(22deg);transition:transform .5s}
+.bbs-careers .bbs-hero-art span:nth-child(2){inset:14%;transform:rotate(-12deg)}
+.bbs-careers .bbs-hero-art span:nth-child(3){inset:28%;transform:rotate(33deg);background:#e3ff0444}
+.bbs-careers .bbs-culture{display:grid;grid-template-columns:1fr .85fr;gap:40px;align-items:center;max-width:1440px;margin:auto;padding:100px 5%;border-bottom:1px solid var(--bbs-border)}
+.bbs-careers .bbs-culture h2,.bbs-careers .bbs-bottom h2{font-size:clamp(32px,4vw,64px);line-height:1.14;letter-spacing:-.06em;font-weight:600;margin:15px 0 0}
+.bbs-careers .bbs-culture p{font-size:17px;line-height:1.9;color:var(--bbs-mute);max-width:510px;margin:0}
+.bbs-careers .bbs-list{max-width:1440px;padding:95px 5% 110px;margin:auto}
+.bbs-careers .bbs-heading{display:flex;align-items:end;justify-content:space-between;gap:26px;margin-bottom:35px}
+.bbs-careers .bbs-heading h2{font-size:clamp(34px,4.4vw,62px);letter-spacing:-.065em;line-height:1.15;margin:15px 0 0;font-weight:600}
+.bbs-careers .bbs-heading p{max-width:300px;font-size:13px;color:var(--bbs-mute);margin:0}
+.bbs-careers .bbs-count{display:inline-block;margin-left:14px;vertical-align:top;font-size:13px;letter-spacing:0;color:var(--bbs-mute);font-weight:400}
+.bbs-careers .bbs-filters{display:grid;grid-template-columns:minmax(200px,2fr) minmax(150px,1fr) minmax(150px,1fr);gap:12px;margin-bottom:26px}
+.bbs-careers .bbs-filters label{margin:0}
+.bbs-careers input[type=search],.bbs-careers select,.bbs-careers input[type=text],.bbs-careers input[type=email],.bbs-careers input[type=tel],.bbs-careers input[type=url],.bbs-careers input[type=file],.bbs-careers textarea{font:inherit;max-width:100%;outline:none;box-shadow:none;min-width:0}
+.bbs-careers .bbs-filters input,.bbs-careers .bbs-filters select{background:#fff;width:100%;min-height:52px;padding:12px 16px;border:1px solid var(--bbs-border);border-radius:3px;color:var(--bbs-ink);font-size:13px}
+.bbs-careers .bbs-filters input:focus,.bbs-careers .bbs-filters select:focus,.bbs-careers .bbs-apply input:focus,.bbs-careers .bbs-apply textarea:focus{border-color:#9aac00}
+.bbs-careers .bbs-job-card{display:flex;align-items:center;justify-content:space-between;gap:26px;min-height:162px;padding:26px 32px 26px 25px;border-bottom:1px solid var(--bbs-border);transition:padding-left .25s,background .25s}
+.bbs-careers .bbs-job-card:first-child{border-top:1px solid var(--bbs-border)}
+.bbs-careers .bbs-job-card:hover{background:#fafbf6;padding-left:35px}
+.bbs-careers .bbs-job-card[hidden]{display:none!important}
+.bbs-careers .bbs-tag{display:inline-block;border:1px solid #dfe2d4;padding:2px 10px;font-size:11px;color:#5c6541;border-radius:20px;line-height:1.65}
+.bbs-careers .bbs-job-card h3{font-size:clamp(21px,2.2vw,31px);font-weight:600;line-height:1.3;letter-spacing:-.04em;margin:10px 0}
+.bbs-careers .bbs-chiprow{display:flex;flex-wrap:wrap;gap:7px 16px;color:var(--bbs-mute);font-size:12px}
+.bbs-careers .bbs-card-arrow{height:46px;min-width:46px;display:grid;place-items:center;border:1px solid #dfe3d5;border-radius:50%;font-size:24px;line-height:1;transition:background .25s,transform .25s}
+.bbs-careers .bbs-job-card:hover .bbs-card-arrow{background:var(--bbs-lime);transform:rotate(45deg)}
+.bbs-careers .bbs-no-results,.bbs-careers .bbs-empty{padding:50px 0;text-align:center;color:var(--bbs-mute)}
+.bbs-careers .bbs-empty h3{font-size:24px;color:var(--bbs-ink)}
+.bbs-careers .bbs-bottom{padding:90px 5%;background:#f5f6f2;text-align:center}
+.bbs-careers .bbs-bottom h2{margin:15px 0}.bbs-careers .bbs-bottom p{color:var(--bbs-mute);margin-bottom:22px}
+.bbs-careers .bbs-bottom a{margin:auto}
+.bbs-careers.bbs-detail{padding:35px max(5%,20px) 110px;max-width:1140px;margin:auto;overflow:visible}
+.bbs-careers .bbs-back{display:inline-block;font-size:13px;color:var(--bbs-mute);margin:20px 0 42px}
+.bbs-careers .bbs-details-meta{display:flex;gap:20px;flex-wrap:wrap;padding:30px 0;border-block:1px solid var(--bbs-border);margin:18px 0 45px}
+.bbs-careers .bbs-details-meta>div{min-width:120px;max-width:270px;flex:1}
+.bbs-careers .bbs-details-meta small{display:block;color:var(--bbs-mute);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.bbs-careers .bbs-details-meta strong{font-size:14px;font-weight:500;line-height:1.4;display:block;overflow-wrap:anywhere}
+.bbs-careers .bbs-role-copy{font-size:15px;color:#3e4138;line-height:1.9;max-width:850px;overflow-wrap:anywhere}
+.bbs-careers .bbs-role-copy h2,.bbs-careers .bbs-role-copy h3{color:var(--bbs-ink);line-height:1.3;letter-spacing:-.035em}
+.bbs-careers .bbs-apply{max-width:880px;border:1px solid var(--bbs-border);padding:clamp(22px,4vw,54px);margin-top:65px;background:#fafbf8}
+.bbs-careers .bbs-apply h2{font-size:clamp(27px,3vw,42px);font-weight:600;letter-spacing:-.055em;margin:12px 0}
+.bbs-careers .bbs-apply p{color:var(--bbs-mute);font-size:13px}
+.bbs-careers .bbs-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.bbs-careers .bbs-apply form>label,.bbs-careers .bbs-form-grid label{display:flex;flex-direction:column;gap:9px;font-size:12px;font-weight:600;margin-bottom:20px}
+.bbs-careers .bbs-apply input:not([type=checkbox]),.bbs-careers .bbs-apply textarea{width:100%;padding:13px 15px;border:1px solid #dedfd9;background:#fff;border-radius:2px;color:var(--bbs-ink);font-size:13px}
+.bbs-careers .bbs-apply input[type=file]{padding:12px;background:#fff;cursor:pointer}
+.bbs-careers .bbs-apply .bbs-consent{flex-direction:row;gap:12px;align-items:start;font-size:12px;font-weight:400;color:#4c5146;line-height:1.7}
+.bbs-careers .bbs-apply .bbs-consent input{margin-top:4px;width:16px;height:16px;accent-color:#a8bd00}
+.bbs-careers .bbs-apply .bbs-consent a{text-decoration:underline}
+.bbs-careers .bbs-apply button{background:var(--bbs-lime);padding:15px 23px;border:0;border-radius:3px;font-weight:600;font-size:14px;cursor:pointer;color:#171814;transition:transform .2s}
+.bbs-careers .bbs-apply button:hover{transform:translateY(-2px)}
+.bbs-careers .bbs-apply .bbs-form-note{font-size:11px;margin:18px 0 0}
+.bbs-careers .bbs-honey{position:absolute!important;left:-99999px!important;opacity:0!important}
+.bbs-careers .bbs-alert{padding:14px 20px;margin:18px 0;border:1px solid}
+.bbs-careers .bbs-success{background:#f0f8e0;border-color:#b8d37b}.bbs-careers .bbs-error{background:#fff2f2;border-color:#efb0b0}
+.bbs-careers .bbs-closed{border:1px solid #e3ddd2;padding:28px;background:#fbf9f3;margin-top:50px;color:#76684e}
+@media(max-width:900px){.bbs-careers .bbs-hero-art{right:2%;opacity:.2}.bbs-careers .bbs-culture{padding-block:70px}.bbs-careers .bbs-list{padding-block:65px}.bbs-careers .bbs-hero{min-height:520px}}
+@media(max-width:660px){.bbs-careers .bbs-hero{min-height:auto;padding:80px 24px 90px}.bbs-careers .bbs-hero h1{font-size:clamp(45px,11vw,68px);letter-spacing:-.07em;margin:22px 0}.bbs-careers .bbs-hero p{font-size:14px}.bbs-careers .bbs-hero-art{width:200px;height:200px;right:-70px;top:50px;opacity:.1}.bbs-careers .bbs-culture{display:block;padding:70px 24px}.bbs-careers .bbs-culture p{font-size:14px;margin-top:22px}.bbs-careers .bbs-list{padding:68px 24px 80px}.bbs-careers .bbs-heading{display:block}.bbs-careers .bbs-heading p{margin-top:15px}.bbs-careers .bbs-filters{grid-template-columns:1fr;gap:9px}.bbs-careers .bbs-job-card{padding:23px 4px;gap:12px;min-height:140px}.bbs-careers .bbs-job-card:hover{padding-left:12px}.bbs-careers .bbs-card-arrow{width:38px;height:38px;min-width:38px;font-size:20px}.bbs-careers .bbs-job-card h3{font-size:21px}.bbs-careers .bbs-bottom{padding:80px 24px}.bbs-careers.bbs-detail{padding:20px 24px 75px}.bbs-careers .bbs-details-meta{gap:22px}.bbs-careers .bbs-details-meta>div{min-width:calc(50% - 15px)}.bbs-careers .bbs-form-grid{grid-template-columns:1fr;gap:0}.bbs-careers .bbs-apply{padding:24px 20px}}
+@media(prefers-reduced-motion:reduce){.bbs-careers *, .bbs-careers *:before,.bbs-careers *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* v0.7: Force the site font within this plugin, regardless of Frisk/Elementor form styles. */
+.bbs-careers,.bbs-careers :where(h1,h2,h3,h4,p,a,button,input,select,textarea,label,span,strong,em,small){font-family:'Poppins',sans-serif!important}
+/* Some themes replace browser checkbox appearance with an invisible custom control. */
+.bbs-careers .bbs-apply label.bbs-consent{display:flex!important;flex-direction:row!important;gap:12px!important;align-items:flex-start!important;cursor:pointer}
+.bbs-careers .bbs-apply label.bbs-consent input[type=checkbox]{-webkit-appearance:checkbox!important;appearance:checkbox!important;display:inline-block!important;position:static!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;flex:0 0 18px!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;margin:4px 0 0!important;accent-color:#9cba00!important;clip:auto!important;transform:none!important;border:1px solid #71786b!important}
+.bbs-careers .bbs-apply label.bbs-consent input[type=checkbox]:focus-visible{outline:2px solid #5b8000;outline-offset:2px}
+.bbs-careers .bbs-apply .bbs-client-alert{background:#fff1f0;border:1px solid #ecaaa6;padding:13px 16px;margin:17px 0;color:#7a2929;font-size:13px;font-weight:500}
+.bbs-careers .bbs-apply .bbs-client-alert[hidden]{display:none!important}
+.bbs-careers .bbs-apply button:disabled{opacity:.55;cursor:progress}
+/* Dedicated job template and vacancy-specific screening fields */
+.aj-native-job-main{padding:32px clamp(18px,5vw,64px) 90px;background:#fff;color:#191f1b;font-family:'Poppins',sans-serif!important}
+.aj-native-job{max-width:1140px;margin:0 auto;min-width:0}
+.aj-native-job-header{padding:58px 0 30px;border-bottom:1px solid #e8ebe4}
+.aj-native-job-label{font-size:11px!important;letter-spacing:.14em;color:#7f897b!important;font-weight:700;margin:0 0 14px!important}
+.aj-native-job-header h1{font-family:'Poppins',sans-serif!important;font-weight:750!important;font-size:clamp(30px,5vw,62px)!important;line-height:1.1!important;letter-spacing:-.055em!important;color:#161f16!important;margin:0 0 14px!important;text-transform:none!important}
+.aj-native-job-header p{color:#697268;font-size:14px}
+.aj-native-job-content,.aj-native-job-content *,.bbs-careers,.bbs-careers *{font-family:'Poppins',sans-serif!important}
+.aj-native-job-content .bbs-detail{padding:30px 0!important;margin:0!important;max-width:none!important;width:100%!important}
+.aj-custom-questions{border:1px solid #e4e8de;border-radius:7px;padding:20px;margin:26px 0 24px;min-width:0}
+.aj-custom-questions legend{font-size:18px;font-weight:700;padding:0 8px;color:#1c241b}
+.aj-custom-questions>p{font-size:12px;color:#7a8475}
+.aj-question{padding:14px 0;border-bottom:1px solid #f0f2eb}
+.aj-question:last-child{border-bottom:0}
+.aj-question>label{display:block;font-size:13px;font-weight:650;margin-bottom:8px;color:#1a2119}
+.aj-question input:not([type=checkbox]):not([type=radio]),.aj-question select,.aj-question textarea{border:1px solid #d9e0d6;border-radius:4px;padding:13px 14px;width:100%;max-width:100%;background:white;box-sizing:border-box;font-size:13px}
+.aj-question input[type=file]{padding:12px;border:1px dashed #bbc6af}
+.aj-question small{display:block;color:#737d70;margin-top:6px;font-size:11px}
+.aj-options{display:grid;gap:8px}
+.aj-option{display:flex;align-items:center;gap:8px;font-size:13px!important;font-weight:400!important}
+.aj-option input{width:17px;height:17px;accent-color:#b2d100;flex:none}
+.bbs-consent{display:flex!important;align-items:start!important;gap:11px!important;padding:12px 0!important}
+.bbs-consent input[type=checkbox]{appearance:auto!important;-webkit-appearance:checkbox!important;opacity:1!important;position:static!important;pointer-events:auto!important;display:block!important;min-width:19px!important;width:19px!important;height:19px!important;flex:0 0 19px!important;margin-top:2px!important;accent-color:#b2d100!important}
+.bbs-consent span{font-weight:400!important;font-size:13px!important}
+@media(max-width:767px){.aj-native-job-main{padding:22px 18px 54px}.aj-native-job-header{padding:25px 0 19px}.aj-custom-questions{padding:13px}}
+
+/* Multi-role applications and unambiguous file limits. */
+.bbs-careers .bbs-job-id{font-size:11px!important;letter-spacing:.06em;color:#6d7568;font-weight:600}
+.bbs-careers .aj-multi-jobs{border:1px solid #e0e4d8;padding:18px;margin:25px 0;max-width:100%;border-radius:6px;min-width:0}
+.bbs-careers .aj-multi-jobs legend{font-size:16px;font-weight:650;padding:0 6px}
+.bbs-careers .aj-other-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:13px}
+.bbs-careers .aj-other-job{display:flex;align-items:flex-start;gap:10px;border:1px solid #dfe4d8;background:#fff;padding:12px;border-radius:5px;cursor:pointer;font-size:12px;min-width:0}
+.bbs-careers .aj-other-job input[type=checkbox]{-webkit-appearance:checkbox!important;appearance:checkbox!important;position:static!important;opacity:1!important;visibility:visible!important;display:block!important;flex:0 0 17px!important;width:17px!important;height:17px!important;margin:3px 0 0!important;accent-color:#9fbc00}
+.bbs-careers .aj-other-job small{display:block;color:#7a8175;font-size:10px;margin-top:3px}
+.bbs-careers .aj-job-question-group{padding:10px 0;margin-top:20px;border-top:1px solid #e1e5da}
+.bbs-careers .aj-job-question-group h3{font-size:18px;margin:14px 0}
+@media(max-width:660px){.bbs-careers .aj-other-list{grid-template-columns:1fr}.bbs-careers .aj-multi-jobs{padding:12px}}
+
+/* v0.11: Frisk/Elementor must never hide native answer controls. */
+.aj-careers-native-page {background:#fff;min-width:0;overflow-x:clip}
+.bbs-careers .aj-choice-set{display:block!important;border:0!important;border-bottom:1px solid #f0f2eb!important;padding:14px 0!important;margin:0!important;min-width:0!important;background:transparent!important}
+.bbs-careers .aj-choice-set .aj-question-label{display:block!important;width:auto!important;font:600 13px/1.5 'Poppins',sans-serif!important;color:#1a2119!important;margin:0 0 12px!important;padding:0!important}
+.bbs-careers .aj-choice-set .aj-options{display:grid!important;gap:10px!important}
+.bbs-careers .aj-choice-set label.aj-option{display:flex!important;flex-direction:row!important;align-items:center!important;gap:11px!important;position:relative!important;visibility:visible!important;opacity:1!important;cursor:pointer!important;min-height:24px!important;max-width:100%!important;margin:0!important;padding:3px 0!important;font:400 13px/1.5 'Poppins',sans-serif!important;background:transparent!important}
+.bbs-careers .aj-choice-set label.aj-option input[type="checkbox"],
+.bbs-careers .aj-choice-set label.aj-option input[type="radio"]{display:inline-block!important;-webkit-appearance:auto!important;appearance:auto!important;visibility:visible!important;opacity:1!important;position:static!important;pointer-events:auto!important;float:none!important;clip:auto!important;clip-path:none!important;transform:none!important;flex:0 0 20px!important;width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;max-width:20px!important;max-height:20px!important;padding:0!important;margin:0!important;accent-color:#9dbc00!important;z-index:1!important;border:1px solid #838b7c!important;box-shadow:none!important}
+.bbs-careers .aj-choice-set label.aj-option span{display:inline-block!important;position:static!important;visibility:visible!important;opacity:1!important;font:400 13px/1.5 'Poppins',sans-serif!important;color:#232b20!important}
+.bbs-careers .aj-choice-set .aj-choice-error{color:#a32e2e!important;font-size:12px!important;margin:5px 0!important}
+.bbs-careers .aj-choice-set .aj-choice-error[hidden]{display:none!important}
+.bbs-careers .aj-choice-set label.aj-option:focus-within{outline:2px solid #9dbc00;outline-offset:3px;border-radius:3px}

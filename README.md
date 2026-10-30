@@ -1,6 +1,6 @@
 # Achuthan Jobs
 
-**Private repository • Big Box Studio • WordPress plugin • v0.11.0 (staging)**
+**Private repository • Achuthan • WordPress plugin • v0.11.0 (staging)**
 
 > This is a **private source repository**, not an open-source release or a
 > production security certification. Keep GitHub repository visibility set to

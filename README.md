@@ -1,6 +1,6 @@
 # Achuthan Jobs
 
-**Private repository • Achuthan • WordPress plugin • v0.12.0 (staging)**
+**Private repository • Achuthan • WordPress plugin • v0.13.0 (staging)**
 
 > This is a **private source repository**, not an open-source release or a
 > production security certification. Keep GitHub repository visibility set to
@@ -9,7 +9,7 @@
 
 Achuthan Jobs manages WordPress job postings, applications, candidate files,
 interviews, recruiter communications, job-specific questions, and the public
-Careers page at `/careers/`. All public and HR interface labels now use **Achuthan**; existing database and URL identifiers are preserved.
+Careers page at `/careers/`. The **plugin publisher remains Achuthan**, while job postings, application consent, candidate emails, and SEO hiring organisation use the **employer name configured per WordPress website**. Existing database and URL identifiers are preserved.
 
 ## Project structure
 
@@ -54,7 +54,7 @@ achuthan-jobs-private-github/
 
 - Main private admin screen: **Achuthan Jobs → HR Dashboard**.
 - Native job post type: `bbs_job`.
-- Public listing: `https://bigboxstudio.in/careers/`.
+- Public listing: `[achuthan_jobs]` on any WordPress page; optional automatic control of the site’s `/careers/` page.
 - Individual jobs: `/careers/{job-slug}/`.
 - Legacy `/careers/job/{job-slug}/` should redirect after rewrite rules refresh.
 - The plugin controls `/careers/` by default. To use an Elementor-owned layout,
@@ -67,6 +67,8 @@ achuthan-jobs-private-github/
 - Job-specific screening questions, including multiple-select questions and
   optional PDF/image attachments (3 MiB per file).
 - Candidate application to up to three positions in one submission.
+- Per-job HR-configurable experience threshold and qualifying choice/number answers; persisted **Requirements not met**, **Meets stated requirements**, or **Needs HR review** flags; no automatic rejection.
+- **Achuthan Jobs → Settings** configures employer organisation name and optional ISO country per site (independent of plugin publisher).
 - Private HR dashboard for applicant status, notes, interviews, email actions,
   private previews, individual and ZIP bulk document export, and deletion.
 - Live Careers listings with background refresh; test CDN/plugin caching.
@@ -84,10 +86,18 @@ achuthan-jobs-private-github/
 
 See [LICENSE.md](LICENSE.md), [SECURITY.md](SECURITY.md) and [testing](docs/TESTING.md).
 
-## Branding and backward compatibility (v0.12.0)
+## Branding and backward compatibility (v0.13.0)
 
-- Plugin header, HR dashboard, job pages, Careers copy, application consent, email subjects and recruitment privacy tools now say **Achuthan** instead of the previous brand.
+- Plugin name, publisher and dashboard product identity remain **Achuthan Jobs**. Public recruiting identity and emails use the configured employer name or current WordPress site title, so the same plugin can run at other employers without hard-coded company names.
 - Existing role ID `bbs_recruiter`, job post type `bbs_job`, `bbs_` database tables, options, CSS classes, actions and legacy shortcode are **not renamed**: doing so would disconnect existing users, jobs and applications.
 - New installations use the WordPress administrator email for recruitment notifications. **Existing email settings are never overwritten on upgrade.** Check the notification address in Achuthan Jobs → Settings.
 - If your legal employer or data controller has a name different from Achuthan, update the job posting organisation and privacy notice to accurately describe it before recruiting.
 - Historical copyright and prior GPL rights remain governed by LICENSE.md and are not silently changed by rebranding.
+
+## Structured eligibility (v0.13.0)
+
+In the WordPress **Jobs → Edit job** form, enter a numeric **Minimum relevant years of experience** such as `2`. The older free-text Experience field is informational and deliberately does **not** silently generate a screening rule. Under **Job application questions**, add a `Dropdown`, `Single choice`, `Multiple choice` or `Number` question; tick **Use as a qualifying requirement** and enter accepted answer(s) or numeric minimum. Save/update the job.
+
+Applicants provide their relevant experience **separately for each role** when applying for several jobs. Qualification flags are calculated using only HR-configured rules and submitted structured answers, never applicant names, age, gender, résumé content, photos, or AI predictions. **Requirements not met** is a manual-review flag, not an automated decision, rejection, recommendation to exclude or hiring-stage change. Missing answers trigger **Needs HR review**. HR can read the explanation and manually re-evaluate when requirements change.
+
+Existing applicants are **Not yet assessed** until an authorised HR member opens the application and re-evaluates it. Avoid job criteria unrelated to essential functions or disproportionately excluding protected groups. Check local employment and privacy law before use.

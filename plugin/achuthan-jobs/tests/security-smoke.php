@@ -61,6 +61,7 @@ function selected($value,$expected,$echo=true){return $value===$expected?'select
 function get_permalink($id){return 'http://localhost/careers/graphic-designer/';}
 function wp_nonce_field(...$args){$value='NONCE '.($args[0]??'');if(!isset($args[3])||$args[3]!==false)echo $value;return $value;}
 function get_option($key,$default=null){return $default;}
+function get_bloginfo($field){return 'Example Hiring Co';}
 function update_option(...$args){}
 function get_transient($key){global $transients;return $transients[$key]??0;}
 function set_transient($key,$val,$seconds){global $transients;$transients[$key]=$val;}
@@ -76,7 +77,7 @@ require dirname(__DIR__).'/achuthan-jobs.php';
 $pass=0;
 function check($condition,$message){global $pass; if(!$condition){fwrite(STDERR,"FAIL: $message\n");exit(1);} $pass++; echo "PASS: $message\n";}
 function private_call($method,...$args){$r=new ReflectionMethod(Achuthan_Jobs::class,$method);return $r->invoke(null,...$args);}
-check(Achuthan_Jobs::VERSION==='0.12.0','Version registered');
+check(Achuthan_Jobs::VERSION==='0.13.0','Version registered');
 check(isset($GLOBALS['hooks']['shortcode_achuthan_jobs']),'Shortcode registered');
 check(isset($GLOBALS['hooks']['wp_ajax_nopriv_aj_live_jobs']),'Public jobs refresh endpoint registered');
 check(isset($GLOBALS['hooks']['wp_ajax_nopriv_aj_extra_questions']),'Public additional job questions endpoint registered');
@@ -317,4 +318,38 @@ $GLOBALS['testJobs']=[(object)['ID'=>123,'post_title'=>'Graphic Designer','post_
 $liveHtml=Achuthan_Jobs::shortcode();
 check(str_contains($liveHtml,'Graphic Designer') && str_contains($liveHtml,'/careers/graphic-designer/'),'Published WordPress jobs become live career cards with canonical URL');
 $GLOBALS['testJobs']=[];
+
+// Transparent eligibility tests: no automatic rejection, no protected-attribute inference.
+$e=Achuthan_Eligibility::evaluate_rules(2.0,[],1.0,[]);
+check($e['status']==='not_met' && count($e['reasons'])===1,'1 year below 2-year threshold: requirements not met');
+$e=Achuthan_Eligibility::evaluate_rules(2.0,[],3.0,[]);
+check($e['status']==='meets','3 years meets minimum 2 years');
+$e=Achuthan_Eligibility::evaluate_rules(2.0,[],null,[]);
+check($e['status']==='review','Missing years requires manual review');
+$e=Achuthan_Eligibility::evaluate_rules(0,[],null,[]);
+check($e['status']==='not_configured','No qualification rules results in not configured');
+$rule=['id'=>'q_role00001','label'=>'Required software','type'=>'radio','accepted'=>['Figma']];
+$e=Achuthan_Eligibility::evaluate_rules(0,[$rule],0,[['id'=>'q_role00001','value'=>'Photoshop']]);
+check($e['status']==='not_met','Nonqualifying choice is flagged');
+$e=Achuthan_Eligibility::evaluate_rules(0,[$rule],0,[['id'=>'q_role00001','value'=>'Figma']]);
+check($e['status']==='meets','Qualifying choice is recognized');
+$rule['type']='checkbox';
+$e=Achuthan_Eligibility::evaluate_rules(0,[$rule],0,[['id'=>'q_role00001','value'=>['Figma','Illustrator']]]);
+check($e['status']==='meets','Multi-select matches at least one approved option');
+$e=Achuthan_Eligibility::evaluate_rules(0,[$rule],0,[['id'=>'q_role00001','value'=>['Photoshop']]]);
+check($e['status']==='not_met','Multi-select without accepted options flagged');
+$e=Achuthan_Eligibility::evaluate_rules(1.0,[$rule],0.5,[]);
+check($e['status']==='not_met' && count($e['unknown'])===1,'Unmet criteria visible even if other answers missing');
+check(isset($GLOBALS['hooks']['admin_post_aj_recheck_eligibility']),'HR-only re-evaluation handler registered');
+check(str_contains(Achuthan_Jobs::shortcode(),'Example Hiring Co'),'Public branding uses host WordPress site');
+
+$qa=Achuthan_Questions::normalize([['id'=>'q_qualify123','label'=>'Can use Figma?','type'=>'radio','options'=>"Yes\nNo",'screen'=>'1','accepted'=>"Yes"]]);
+check($qa[0]['screen']===true && $qa[0]['accepted']===['Yes'],'HR qualifying choice is normalized and saved');
+$qa=Achuthan_Questions::normalize([['id'=>'q_qualify123','label'=>'Can use Figma?','type'=>'radio','options'=>"Yes\nNo",'screen'=>'1','accepted'=>"Not in options"]]);
+check($qa[0]['screen']===false,'Misconfigured qualifying answer cannot flag candidates');
+$qa=Achuthan_Questions::normalize([['id'=>'q_qualify123','label'=>'Relevant projects delivered','type'=>'number','screen'=>'1','minimum'=>'5']]);
+check($qa[0]['screen']===true && $qa[0]['minimum']===5.0,'Minimum numeric qualifying question saved');
+$qa=Achuthan_Questions::normalize([['id'=>'q_qualify123','label'=>'Upload portfolio','type'=>'file','screen'=>'1']]);
+check($qa[0]['screen']===false,'Files are never automatically scored');
+
 echo "ALL $pass MOCK ASSERTIONS PASSED. REAL WP INTEGRATION REMAINS UNTESTED.\n";

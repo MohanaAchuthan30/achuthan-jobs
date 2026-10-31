@@ -110,3 +110,13 @@
 .aj-delete-row{font-size:12px!important}
 body.aj-preview-active{overflow:hidden}
 @media(max-width:782px){.aj-preview-modal{padding:6px}.aj-preview-panel{height:96vh}.aj-preview-heading{padding:10px}.aj-preview-footnote{font-size:10px}}
+
+/* Eligibility flags – neutral, HR-only decision support. */
+.aj-eligibility-pill{display:inline-block;max-width:200px;padding:4px 9px;border-radius:5px;font-size:11px;font-weight:600;line-height:1.35;background:#f1f2ef;color:#414941;white-space:normal}
+.aj-eligibility-not_met{background:#fff0eb;color:#9c3324}
+.aj-eligibility-review{background:#fff5d8;color:#775007}
+.aj-eligibility-meets{background:#e7f7e8;color:#235c30}
+.aj-eligibility-panel ul{padding-left:21px;list-style:disc}
+.aj-eligibility-panel li{margin:5px 0}
+.aj-screening-admin,.aj-eligibility-question{border:1px solid #dfe7c8;padding:13px;margin-top:13px;border-radius:7px;background:#fbfdf5}
+.aj-eligibility-question[hidden],.aj-screen-choice[hidden],.aj-screen-number[hidden]{display:none!important}

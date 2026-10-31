@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.0 — 2026-10-31
+
+- Added structured experience thresholds per job (such as 2 years), qualifying answers to choice questions, and minimum numeric screening questions.
+- Applicants to multiple jobs provide job-specific relevant experience; outcomes are saved separately per application.
+- HR sees human-review eligibility flags and specific reasons in the Applications table, recent activity, and candidate details.
+- Added authenticated, nonce-protected **Re-evaluate** operation with audit logging when job requirements change; existing applications remain **Not yet assessed** until manually checked.
+- No auto rejection, hiring-stage changes, candidate scoring from resume PDFs, or decisions based on personal/demographic data.
+- Public careers copy, employer name, candidate consent, email wording and SEO organisation now use the configured employer name or the current WordPress site title.
+- Made location text and schema country/timezone independent of Bengaluru/India; works with WordPress shortcode on other sites. Internal identifiers remain for compatibility.
+
+
 ## 0.12.0 — 2026-10-30
 
 - Rebranded the plugin author and all user-facing plugin text to **Achuthan**.

@@ -44,3 +44,8 @@ bash scripts/build-plugin.sh
 - No antivirus is required; documents can contain malicious content even if
   type and structure validation passes.
 - GitHub Actions build artifacts are not deployed automatically.
+
+
+## Eligibility tests added in 0.13
+
+Run `bash scripts/verify.sh` and inspect `tests/security-smoke.php`. This tests the pure rule evaluator (threshold, accepted option, multi-option, numeric and missing data), permissions and existing mocking harness. Run actual end-to-end applications on a real WordPress staging server; mocked tests do not prove live DB migrations, admin screens or Mail/Elementor integration.

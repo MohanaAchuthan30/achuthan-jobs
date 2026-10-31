@@ -129,3 +129,8 @@
 .bbs-careers .aj-choice-set .aj-choice-error{color:#a32e2e!important;font-size:12px!important;margin:5px 0!important}
 .bbs-careers .aj-choice-set .aj-choice-error[hidden]{display:none!important}
 .bbs-careers .aj-choice-set label.aj-option:focus-within{outline:2px solid #9dbc00;outline-offset:3px;border-radius:3px}
+
+/* Scoped role-specific experience questions */
+.bbs-careers .aj-experience-field{display:block;margin:16px 0 3px;font-weight:600}
+.bbs-careers .aj-experience-field input{display:block;margin-top:8px;max-width:220px;width:100%;padding:11px;border:1px solid #daddd6;border-radius:3px}
+.bbs-careers .aj-screening-help{font-size:12px;line-height:1.6;color:#727972;margin:3px 0 17px}

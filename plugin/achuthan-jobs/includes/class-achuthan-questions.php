@@ -82,7 +82,26 @@ final class Achuthan_Questions {
             }
             $allow=sanitize_key((string)($r['allow']??'pdf'));
             if(!in_array($allow,array('pdf','images','both'),true))$allow='pdf';
-            $out[]=array('id'=>$id,'label'=>$label,'type'=>$type,'required'=>!empty($r['required']),'options'=>$opts,'allow'=>$allow);
+            // Only objective, structured responses are eligible for rule-based flags.
+            $can_screen=in_array($type,array('select','radio','checkbox','number'),true);
+            $screen=$can_screen && !empty($r['screen']);
+            $accepted=array();
+            if ($screen && $type!=='number') {
+                $raw=is_scalar($r['accepted']??null)?(string)wp_unslash($r['accepted']):'';
+                foreach(preg_split('/\r?\n/',$raw) as $candidate) {
+                    $candidate=sanitize_text_field(trim($candidate));
+                    if(in_array($candidate,$opts,true)&&!in_array($candidate,$accepted,true))$accepted[]=$candidate;
+                }
+                if (!$accepted) $screen=false; // no accidental automatic rule
+            }
+            $minimum=0;
+            if ($screen && $type==='number') {
+                $v=is_scalar($r['minimum']??null)?(string)wp_unslash($r['minimum']):'';
+                if(!is_numeric($v)||!is_finite((float)$v)||abs((float)$v)>1000000){$screen=false;}
+                else $minimum=(float)$v;
+            }
+            $out[]=array('id'=>$id,'label'=>$label,'type'=>$type,'required'=>!empty($r['required']),
+                'options'=>$opts,'allow'=>$allow,'screen'=>$screen,'accepted'=>$accepted,'minimum'=>$minimum);
         }
         return $out;
     }
@@ -110,6 +129,10 @@ final class Achuthan_Questions {
         echo '<div class="aj-file-section"'.($type!=='file'?' hidden':'').'><label>Accepted files <select name="'.esc_attr($base).'[allow]">';
         foreach(array('pdf'=>'PDF documents','images'=>'JPG/PNG images','both'=>'PDF and JPG/PNG') as $k=>$v)echo '<option value="'.esc_attr($k).'" '.selected($q['allow']??'pdf',$k,false).'>'.esc_html($v).'</option>';
         echo '</select></label></div>';
+        $screenable=in_array($type,array('radio','select','checkbox','number'),true);
+        echo '<div class="aj-eligibility-question"'.(!$screenable?' hidden':'').'><label><input type="checkbox" class="aj-screen-toggle" name="'.esc_attr($base).'[screen]" value="1" '.checked(!empty($q['screen']),true,false).'> Use as a qualifying requirement (HR guidance only)</label>';
+        echo '<div class="aj-screen-choice"'.($type==='number'?' hidden':'').'><p class="description">Qualifying choice(s), one exact option per line; must match the choices above. For multiple-choice, at least one must be selected.</p><textarea rows="2" name="'.esc_attr($base).'[accepted]" placeholder="Enter acceptable answers one per line" style="width:100%">'.esc_textarea(implode("\n",(array)($q['accepted']??array()))).'</textarea></div>';
+        echo '<div class="aj-screen-number"'.($type!=='number'?' hidden':'').'><label>Minimum acceptable numeric answer <input type="number" step="any" name="'.esc_attr($base).'[minimum]" value="'.esc_attr($q['minimum']??'0').'"></label></div></div>';
         echo '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px"><label><input type="checkbox" value="1" name="'.esc_attr($base).'[required]" '.checked(!empty($q['required']),true,false).'> Required answer</label><button type="button" class="button button-link-delete aj-remove-question">Remove question</button></div></div>';
     }
     public static function save($post_id) {

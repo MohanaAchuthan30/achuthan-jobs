@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Achuthan Jobs
- * Description: Private recruitment dashboard, job postings and applicant management for Achuthan.
- * Version: 0.12.0
+ * Description: Multi-site WordPress recruitment dashboard with jobs, applicant management, and transparent HR eligibility checks.
+ * Version: 0.13.0
  * Requires at least: 6.2
  * Requires PHP: 8.0
  * License: Proprietary (internal use only)
@@ -22,7 +22,7 @@ if ( class_exists( 'BBS_Careers', false ) ) {
 }
 
 final class Achuthan_Jobs {
-    const VERSION = '0.12.0';
+    const VERSION = '0.13.0';
     const MAX_CSV_BYTES = 1048576;
     const MAX_CSV_ROWS = 100;
     // Legacy internal identifiers are intentionally retained for upgrade safety.
@@ -90,6 +90,14 @@ final class Achuthan_Jobs {
         );
     }
     private static function table() { global $wpdb; return $wpdb->prefix . 'bbs_applications'; }
+    public static function employer_name() {
+        $name=trim((string)get_option('aj_employer_name',''));
+        return $name!=='' ? $name : (string)get_bloginfo('name');
+    }
+    private static function country() {
+        $country=strtoupper((string)get_option('aj_employer_country',''));
+        return preg_match('/^[A-Z]{2}$/D',$country)?$country:'';
+    }
     private static function data( $key, $default = '' ) {
         return isset( $_POST[$key] ) && is_scalar( $_POST[$key] ) ? sanitize_text_field( wp_unslash( $_POST[$key] ) ) : $default;
     }
@@ -128,6 +136,9 @@ final class Achuthan_Jobs {
             notes longtext NOT NULL,
             question_answers longtext NOT NULL,
             candidate_rating tinyint(3) unsigned NOT NULL DEFAULT 0,
+            candidate_experience decimal(4,1) DEFAULT NULL,
+            eligibility_status varchar(20) NOT NULL DEFAULT 'unassessed',
+            eligibility_detail longtext NOT NULL,
             interview_at date DEFAULT NULL,
             interview_time varchar(5) NOT NULL DEFAULT '',
             interview_mode varchar(30) NOT NULL DEFAULT '',
@@ -181,6 +192,8 @@ final class Achuthan_Jobs {
         if ( false === get_option('aj_own_careers_page', false) ) add_option('aj_own_careers_page', '1', '', false);
         if ( false === get_option('bbs_retention_days', false) ) add_option('bbs_retention_days', 180);
         if ( false === get_option('bbs_hr_email', false) ) add_option('bbs_hr_email', get_option('admin_email'));
+        if ( false === get_option('aj_employer_name', false) ) add_option('aj_employer_name', get_bloginfo('name'));
+        if ( false === get_option('aj_employer_country', false) ) add_option('aj_employer_country', '');
         if ( ! wp_next_scheduled('bbs_daily_cleanup') ) wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'bbs_daily_cleanup');
         flush_rewrite_rules();
     }
@@ -212,6 +225,7 @@ final class Achuthan_Jobs {
         add_action('admin_post_nopriv_bbs_apply', array(__CLASS__,'apply'));
         add_action('admin_post_bbs_apply', array(__CLASS__,'apply'));
         add_action('admin_post_bbs_update_applicant', array(__CLASS__,'update_applicant'));
+        add_action('admin_post_aj_recheck_eligibility',array(__CLASS__,'recheck_eligibility'));
         add_action('admin_post_bbs_delete_applicant', array(__CLASS__,'delete_applicant'));
         add_action('admin_post_bbs_download_resume', array(__CLASS__,'download_resume'));
         add_action('admin_post_aj_preview_resume', array(__CLASS__,'preview_resume'));
@@ -267,7 +281,7 @@ final class Achuthan_Jobs {
                 }
                 echo '</select>';
             } else {
-                echo '<input style="width:100%" type="'.($key==='deadline'?'date':'text').'" id="bbs_'.esc_attr($key).'" name="bbs_'.esc_attr($key).'" value="'.esc_attr($val).'" placeholder="'.esc_attr($key==='location'?'Bengaluru, Karnataka':($key==='department'?'Design':'')).'">';
+                echo '<input style="width:100%" type="'.($key==='deadline'?'date':'text').'" id="bbs_'.esc_attr($key).'" name="bbs_'.esc_attr($key).'" value="'.esc_attr($val).'" placeholder="'.esc_attr($key==='location'?'City / Remote / Hybrid':($key==='department'?'Design':'')).'">';
             }
             echo '</p>';
         }
@@ -277,6 +291,9 @@ final class Achuthan_Jobs {
             echo '<option value="'.esc_attr($value).'" '.selected($status,$value,false).'>'.esc_html($label).'</option>';
         }
         echo '</select></p></div>';
+        $min=Achuthan_Eligibility::min_years($post->ID);
+        echo '<div class="aj-screening-admin"><h3>Eligibility screening (HR guidance only)</h3><p>Set objective requirements for this position. Applicants who do not meet them are flagged for human review, never automatically rejected. Additional qualifying answers can be configured within the custom questions below.</p>';
+        echo '<label for="aj_min_years"><strong>Minimum relevant years of experience</strong></label><br><input type="number" id="aj_min_years" name="aj_min_years" min="0" max="70" step="0.5" value="'.esc_attr($min?:'0').'"><p class="description">Example: 2. Set to 0 to disable the experience threshold. Unanswered questions are marked Needs HR review, not rejected.</p></div>';
     }
     public static function save_meta($post_id) {
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
@@ -285,6 +302,9 @@ final class Achuthan_Jobs {
         $raw_code=strtoupper(self::data('aj_job_code'));
         if ($raw_code==='' || !preg_match('/^[A-Z0-9-]{3,30}$/D',$raw_code) || !self::available_code($raw_code,$post_id)) $raw_code='AJ-'.str_pad((string)$post_id,6,'0',STR_PAD_LEFT);
         update_post_meta($post_id,'_aj_job_code',$raw_code);
+        $years=self::data('aj_min_years','0');
+        $minimum= is_numeric($years) && (float)$years>=0 && (float)$years<=70 ? round((float)$years*2)/2 : 0;
+        update_post_meta($post_id,Achuthan_Eligibility::META_MIN_YEARS,$minimum);
         foreach (array('department','location','type','experience','salary','deadline','status') as $key) {
             $value = self::data('bbs_'.$key);
             if ('deadline' === $key && !self::valid_date($value)) $value = '';
@@ -325,11 +345,11 @@ final class Achuthan_Jobs {
     public static function shortcode() {
         self::enqueue_front_assets();
         ob_start();
-        echo '<section class="bbs-careers" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'" aria-label="Achuthan careers powered by Achuthan Jobs">';
-        echo '<div class="bbs-hero"><div class="bbs-eyebrow"><span class="bbs-dot"></span> ACHUTHAN / CAREERS</div><h1>Find your place<br>to <em>create more.</em></h1><p>Great ideas need people who care. Explore opportunities to build brands, shape experiences and create meaningful work.</p><a href="#bbs-openings" class="bbs-hero-link">Explore open positions '.self::arrow_svg().'</a><div class="bbs-hero-art" aria-hidden="true"><span></span><span></span><span></span></div></div>';
-        echo '<div class="bbs-culture"><div><span class="bbs-overline">THE CULTURE</span><h2>Creative thinking.<br>Real impact.</h2></div><p>We bring together strategy, design, packaging and digital execution. Different skills, one shared ambition: make standout work.</p></div>';
+        echo '<section class="bbs-careers" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'" aria-label="'.esc_attr(self::employer_name()).' careers">';
+        echo '<div class="bbs-hero"><div class="bbs-eyebrow"><span class="bbs-dot"></span> '.esc_html(self::employer_name()).' / CAREERS</div><h1>Discover your next<br><em>opportunity.</em></h1><p>Explore open roles and find a team where your skills can make a difference.</p><a href="#bbs-openings" class="bbs-hero-link">Explore open positions '.self::arrow_svg().'</a><div class="bbs-hero-art" aria-hidden="true"><span></span><span></span><span></span></div></div>';
+        echo '<div class="bbs-culture"><div><span class="bbs-overline">THE TEAM</span><h2>Your next chapter<br>starts here.</h2></div><p>Explore opportunities and learn where you can make a meaningful contribution.</p></div>';
         echo self::render_list();
-        echo '<div class="bbs-bottom"><span class="bbs-overline">OUR PEOPLE MAKE THE WORK</span><h2>Different minds.<br>One shared vision.</h2><p>See what we create together.</p><a href="'.esc_url(home_url('/works/')).'">Explore our work '.self::arrow_svg().'</a></div></section>';
+        echo '<div class="bbs-bottom"><span class="bbs-overline">YOUR NEXT OPPORTUNITY</span><h2>Find a role<br>that fits.</h2><p>All advertised positions are managed by '.esc_html(self::employer_name()).'.</p></div></section>';
         return ob_get_clean();
     }
     /** Server-side output for SEO plus an uncached AJAX refresh for the live Careers page. */
@@ -378,10 +398,10 @@ final class Achuthan_Jobs {
         nocache_headers();
         $id=isset($_GET['job_id'])?absint(wp_unslash($_GET['job_id'])):0;
         if (!self::open($id)) wp_send_json_error(array('message'=>'This vacancy is no longer accepting applications.'),404);
-        wp_send_json_success(array('html'=>Achuthan_Questions::render($id,true)));
+        wp_send_json_success(array('html'=>Achuthan_Eligibility::applicant_field($id).Achuthan_Questions::render($id,true)));
     }
     public static function document_title($parts) {
-        if (is_singular(self::CPT)) $parts['title'] = get_the_title() . ' — Careers at Achuthan';
+        if (is_singular(self::CPT)) $parts['title'] = get_the_title() . ' — Careers at ' . self::employer_name();
         return $parts;
     }
     public static function job_content($content) {
@@ -389,7 +409,7 @@ final class Achuthan_Jobs {
         self::enqueue_front_assets();
         $id=get_the_ID();
         $fields=array('department'=>'Department','location'=>'Location','type'=>'Job type','experience'=>'Experience','salary'=>'Compensation','deadline'=>'Apply by');
-        $out='<div class="bbs-careers bbs-detail" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'"><a class="bbs-back" href="'.esc_url(home_url('/careers/')).'">← All opportunities</a><p class="bbs-overline">ACHUTHAN / OPPORTUNITY</p><div class="bbs-details-meta">';
+        $out='<div class="bbs-careers bbs-detail" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'"><a class="bbs-back" href="'.esc_url(home_url('/careers/')).'">← All opportunities</a><p class="bbs-overline">'.esc_html(self::employer_name()).' / OPPORTUNITY</p><div class="bbs-details-meta">';
         foreach($fields as $key=>$label) {
             $val=self::job_meta($id,$key);
             if($val) $out.='<div><small>'.esc_html($label).'</small><strong>'.esc_html($val).'</strong></div>';
@@ -414,6 +434,7 @@ final class Achuthan_Jobs {
         $out.='<div class="bbs-honey" aria-hidden="true"><label>Leave blank <input name="company_website" tabindex="-1" autocomplete="off"></label></div>';
         $out.='<div class="bbs-form-grid"><label>Full name *<input required maxlength="190" name="full_name" autocomplete="name"></label><label>Email address *<input type="email" required maxlength="190" name="email" autocomplete="email"></label><label>Phone number<input type="tel" name="phone" maxlength="50" autocomplete="tel"></label><label>Portfolio / LinkedIn link<input type="url" name="portfolio" placeholder="https://" maxlength="500"></label></div>';
         $out.='<label>Why would you like to join?<textarea name="message" rows="5" maxlength="6000" placeholder="Tell us about your work and what you would bring to the team..."></textarea></label>';
+        $out.=Achuthan_Eligibility::applicant_field($id);
         $out.=Achuthan_Questions::render($id,true);
         $other_jobs=get_posts(array('post_type'=>self::CPT,'post_status'=>'publish','numberposts'=>100,'orderby'=>'date','order'=>'DESC'));
         $more=array();foreach($other_jobs as $j) if($j->ID!==$id && self::open($j->ID)) $more[]=$j;
@@ -424,7 +445,7 @@ final class Achuthan_Jobs {
         }
         $out.='<label>Resume (PDF only, max 3 MB) *<input type="file" name="resume" required accept=".pdf,application/pdf"></label>';
         $privacy=get_privacy_policy_url();
-        $text='I agree to Achuthan processing my application and CV for recruitment purposes';
+        $text='I agree to '.self::employer_name().' processing my application and CV for recruitment purposes';
         $out.='<label class="bbs-consent"><input type="checkbox" name="bbs_consent" value="1" required><span>'.esc_html($text).($privacy?' under its <a target="_blank" rel="noopener" href="'.esc_url($privacy).'">privacy policy</a>':'').'.</span></label>';
         $out.='<button type="submit">Submit application '.self::arrow_svg().'</button><p class="bbs-form-note">Please do not include ID proofs, bank information or other sensitive documents.</p></form></div>';
         return $out;
@@ -473,6 +494,10 @@ final class Achuthan_Jobs {
         foreach($job_ids as $jid){
             $response=Achuthan_Questions::validate($jid,true);
             if(is_wp_error($response))self::apply_redirect($id,'questions');
+            $raw_years=isset($_POST['aj_years']) && is_array($_POST['aj_years']) && isset($_POST['aj_years'][$jid]) && is_scalar($_POST['aj_years'][$jid]) ? sanitize_text_field(wp_unslash($_POST['aj_years'][$jid])) : '';
+            if ($raw_years!=='' && (!is_numeric($raw_years) || (float)$raw_years<0 || (float)$raw_years>70 || round((float)$raw_years*2)/2 !== (float)$raw_years)) self::apply_redirect($id,'invalid');
+            $response['experience']=$raw_years===''?null:(float)$raw_years;
+            $response['eligibility']=Achuthan_Eligibility::evaluate($jid,$response['experience'],$response['answers']);
             $responses[$jid]=$response;
         }
         $encrypted=self::encrypt_resume($bytes);
@@ -486,7 +511,11 @@ final class Achuthan_Jobs {
             $ok=$wpdb->insert($table,array('job_id'=>$jid,'full_name'=>$name,'email'=>$email,'phone'=>$phone,
                 'portfolio'=>$portfolio,'message'=>$message,'question_answers'=>wp_json_encode($responses[$jid]['answers']),
                 'resume_filename'=>$filename,'resume_mime'=>'application/pdf','resume_data'=>$encrypted,
-                'scan_status'=>'validated','stage'=>'new','notes'=>'','consent_at'=>$now,'created_at'=>$now,'updated_at'=>$now));
+                'scan_status'=>'validated','stage'=>'new','notes'=>'',
+                'candidate_experience'=>$responses[$jid]['experience'],
+                'eligibility_status'=>$responses[$jid]['eligibility']['status'],
+                'eligibility_detail'=>wp_json_encode($responses[$jid]['eligibility']),
+                'consent_at'=>$now,'created_at'=>$now,'updated_at'=>$now));
             if($ok===false){$failed=true;break;}
             $application_id=(int)$wpdb->insert_id;
             if(!Achuthan_Questions::save_files($application_id,$responses[$jid]['files'])){$failed=true;break;}
@@ -497,13 +526,14 @@ final class Achuthan_Jobs {
         $notify=get_option('bbs_hr_email',get_option('admin_email'));
         foreach($inserted as $new){
             self::audit('application_submitted',$new['application'],'validated');
+            self::audit('eligibility_assessed',$new['application'], $responses[$new['job']]['eligibility']['status']);
             if(is_email($notify)&&!wp_mail($notify,'New job application ['.self::job_code($new['job']).']: '.get_the_title($new['job']),
                 "Candidate: ".$name."\nRole: ".get_the_title($new['job'])."\nJob ID: ".self::job_code($new['job'])."\nView: ".admin_url('admin.php?page=bbs-applicants&view='.$new['application'])))
                 update_option('achuthan_jobs_mail_failed_at',$now,false);
         }
         if($inserted){
             $titles=array_map(static function($item){return get_the_title($item['job']);},$inserted);
-            if(!wp_mail($email,'Applications received — Achuthan',"Hi ".$name.",\n\nWe received your application for: ".implode(', ',$titles).".\n\nAchuthan"))
+            if(!wp_mail($email,'Applications received — '.self::employer_name(),"Hi ".$name.",\n\nWe received your application for: ".implode(', ',$titles).".\n\n".self::employer_name()))
                 update_option('achuthan_jobs_mail_failed_at',$now,false);
         }
         self::apply_redirect($id,'success');
@@ -596,7 +626,7 @@ final class Achuthan_Jobs {
         global $wpdb; $table=self::table();
         $limit=max(1,min(30,(int)$limit));
         // The table name is derived from the trusted WPDB prefix, never from request data.
-        return (array)$wpdb->get_results($wpdb->prepare("SELECT id, job_id, full_name, stage, created_at FROM $table ORDER BY created_at DESC LIMIT %d",$limit));
+        return (array)$wpdb->get_results($wpdb->prepare("SELECT id, job_id, full_name, stage, eligibility_status, created_at FROM $table ORDER BY created_at DESC LIMIT %d",$limit));
     }
     private static function dashboard_interviews($limit=12) {
         global $wpdb; $table=self::table();
@@ -627,7 +657,7 @@ final class Achuthan_Jobs {
         echo '<section class="aj-white-card aj-compose-card" id="aj-compose"><div class="aj-panel-heading"><div><h2>Email applicant</h2><p>Write directly to '.esc_html($person->full_name).' ('.esc_html($person->email).') about '.esc_html(get_the_title($person->job_id)).'.</p></div><a href="'.esc_url($base).'">Close ×</a></div>';
         echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'" class="aj-compose-form"><input type="hidden" name="action" value="aj_candidate_email"><input type="hidden" name="return_to" value="dashboard"><input type="hidden" name="id" value="'.esc_attr($person->id).'">';
         wp_nonce_field('aj_candidate_email_'.$person->id);
-        echo '<label><strong>Subject</strong><input type="text" required maxlength="150" name="subject" value="Regarding your application to Achuthan"></label>';
+        echo '<label><strong>Subject</strong><input type="text" required maxlength="150" name="subject" value="Regarding your application to '.esc_attr(self::employer_name()).'"></label>';
         echo '<label><strong>Message to '.esc_html($person->full_name).'</strong><textarea name="body" required maxlength="5000" rows="7" placeholder="Hi '.esc_attr($person->full_name).',"></textarea></label>';
         echo '<p class="description">Messages are sent via your WordPress email service. Configure and test SMTP before using with real candidates.</p><button class="button button-primary" type="submit">Send email to applicant</button></form></section>';
     }
@@ -655,7 +685,7 @@ final class Achuthan_Jobs {
         $careers=get_page_by_path('careers');
         $careers_link=$careers?get_permalink($careers):home_url('/careers/');
         echo '<div class="wrap bbs-admin aj-dashboard">';
-        echo '<div class="aj-hero"><div class="aj-hero-top"><span class="aj-monogram" aria-hidden="true">aj.</span><div><strong>ACHUTHAN JOBS</strong><span>ACHUTHAN · HUMAN RESOURCES</span></div><span class="aj-workspace-tag"><span class="aj-status-dot"></span> PRIVATE HR WORKSPACE</span></div>';
+        echo '<div class="aj-hero"><div class="aj-hero-top"><span class="aj-monogram" aria-hidden="true">aj.</span><div><strong>ACHUTHAN JOBS</strong><span>WORDPRESS RECRUITMENT MANAGEMENT</span></div><span class="aj-workspace-tag"><span class="aj-status-dot"></span> PRIVATE HR WORKSPACE</span></div>';
         echo '<div class="aj-hero-main"><div><p class="aj-kicker">RECRUITMENT CONTROL CENTER</p><h1>'.esc_html($title).'<span class="aj-lime-period">.</span></h1><p>'.esc_html($sub).'</p></div>';
         echo '<div class="aj-hero-actions"><a class="button button-primary" href="'.esc_url(admin_url('post-new.php?post_type='.self::CPT)).'"><span class="dashicons dashicons-plus-alt2" aria-hidden="true"></span> Post a job</a>';
         echo '<a class="button" href="'.esc_url($apps_link).'">View applications <span aria-hidden="true">↗</span></a></div></div></div>';
@@ -686,10 +716,10 @@ final class Achuthan_Jobs {
             echo '<section class="aj-white-card">';self::dashboard_panel_header('Recent applications','The latest people interested in joining your team.',$apps_link,'All applicants');
             if(!$recent) echo '<div class="aj-empty"><b>No applications yet</b><p>Applicants will appear here after submitting the Careers form.</p></div>';
             else {
-                echo '<div class="aj-table-scroll"><table class="aj-data-table"><thead><tr><th>Candidate</th><th>Applied for</th><th>Stage</th><th>Applied</th><th></th></tr></thead><tbody>';
+                echo '<div class="aj-table-scroll"><table class="aj-data-table"><thead><tr><th>Candidate</th><th>Applied for</th><th>Stage</th><th>Eligibility</th><th>Applied</th><th></th></tr></thead><tbody>';
                 foreach($recent as $a){
                     echo '<tr><td><a class="aj-person" href="'.esc_url(self::admin_candidate_url($a->id)).'">'.esc_html($a->full_name).'</a></td>';
-                    echo '<td>'.esc_html(get_the_title($a->job_id)).'</td><td>'.self::admin_stage_badge($a->stage).'</td>';
+                    echo '<td>'.esc_html(get_the_title($a->job_id)).'</td><td>'.self::admin_stage_badge($a->stage).'</td><td><span class="aj-eligibility-pill aj-eligibility-'.esc_attr($a->eligibility_status).'">'.esc_html(Achuthan_Eligibility::label($a->eligibility_status)).'</span></td>';
                     echo '<td>'.esc_html(get_date_from_gmt($a->created_at,'d M Y')).'</td><td><a class="aj-icon-link" aria-label="Open candidate" href="'.esc_url(self::admin_candidate_url($a->id)).'">↗</a> <a class="button aj-mail-action" href="'.esc_url(add_query_arg('compose',absint($a->id),$base)).'">Email</a></td></tr>';
                 }
                 echo '</tbody></table></div>';
@@ -745,9 +775,9 @@ final class Achuthan_Jobs {
         if($status) { $where.=' AND stage=%s'; $args[]=$status; }
         if($q) { $where.=' AND (full_name LIKE %s OR email LIKE %s)'; $like='%'.$wpdb->esc_like($q).'%'; $args[]=$like;$args[]=$like; }
         $total=(int)$wpdb->get_var($args?$wpdb->prepare("SELECT COUNT(*) FROM $table WHERE $where",$args):"SELECT COUNT(*) FROM $table WHERE $where");
-        $sql="SELECT id, job_id, full_name, email, stage, created_at, interview_at, candidate_rating FROM $table WHERE $where ORDER BY created_at DESC LIMIT %d OFFSET %d";
+        $sql="SELECT id, job_id, full_name, email, stage, eligibility_status, created_at, interview_at, candidate_rating FROM $table WHERE $where ORDER BY created_at DESC LIMIT %d OFFSET %d";
         $rows=$wpdb->get_results($wpdb->prepare($sql,array_merge($args,array($per,($page-1)*$per))));
-        echo '<div class="wrap bbs-admin"><div class="bbs-admin-head"><p>ACHUTHAN / HR</p><h1>Applications</h1><span>'.esc_html($total).' candidate records match your filters</span></div>';
+        echo '<div class="wrap bbs-admin"><div class="bbs-admin-head"><p>RECRUITMENT / HR</p><h1>Applications</h1><span>'.esc_html($total).' candidate records match your filters</span></div>';
         echo '<form method="get" class="bbs-table-filter"><input type="hidden" name="page" value="bbs-applicants"><input type="search" name="s" value="'.esc_attr($q).'" placeholder="Search name or email"><select name="stage"><option value="">All stages</option>';
         foreach(self::stages() as $key=>$label) echo '<option value="'.esc_attr($key).'" '.selected($status,$key,false).'>'.esc_html($label).'</option>';
         echo '</select><button class="button button-primary">Filter</button></form>';
@@ -756,9 +786,9 @@ final class Achuthan_Jobs {
         echo '<p class="aj-bulk-controls"><label><strong>Bulk action</strong> <select name="bulk_action" required><option value="">Choose action</option>';
         foreach(self::stages() as $code=>$label) echo '<option value="stage_'.esc_attr($code).'">Move to '.esc_html($label).'</option>';
         echo '<option value="download_files">Download selected files (ZIP)</option><option value="delete">Permanently delete</option></select></label> <button type="submit" class="button button-primary">Apply to selected</button> <span>Stage/delete: maximum 100. Download ZIP: maximum 20 candidates, 80 MB.</span></p>';
-        echo '<table class="widefat striped bbs-table"><thead><tr><th><input type="checkbox" id="aj-app-select-all" aria-label="Select all on this page"></th><th>Candidate</th><th>Role / Job ID</th><th>Status</th><th>Applied</th><th>Rating</th><th>Interview</th><th></th></tr></thead><tbody>';
-        foreach($rows as $row) echo '<tr><td><input type="checkbox" name="candidate_ids[]" value="'.esc_attr($row->id).'" class="aj-app-check" aria-label="Select candidate '.esc_attr($row->full_name).'"></td><td><strong>'.esc_html($row->full_name).'</strong><small>'.esc_html($row->email).'</small></td><td>'.esc_html(get_the_title($row->job_id)).'<small>'.esc_html(self::job_code($row->job_id)).'</small></td><td><span class="bbs-pill">'.esc_html(self::stages()[$row->stage]??$row->stage).'</span></td><td>'.esc_html(get_date_from_gmt($row->created_at,'d M Y')).'</td><td>'.esc_html((string)($row->candidate_rating??0)).'/5</td><td>'.esc_html($row->interview_at?:'—').'</td><td><a class="button" href="'.esc_url(admin_url('admin.php?page=bbs-applicants&view='.$row->id)).'">View / preview</a> <button type="submit" form="aj-delete-one-'.esc_attr($row->id).'" class="button button-link-delete aj-delete-row">Delete</button></td></tr>';
-        if(!$rows) echo '<tr><td colspan="7">No applications found.</td></tr>';
+        echo '<table class="widefat striped bbs-table"><thead><tr><th><input type="checkbox" id="aj-app-select-all" aria-label="Select all on this page"></th><th>Candidate</th><th>Role / Job ID</th><th>Status</th><th>Eligibility</th><th>Applied</th><th>Rating</th><th>Interview</th><th></th></tr></thead><tbody>';
+        foreach($rows as $row) echo '<tr><td><input type="checkbox" name="candidate_ids[]" value="'.esc_attr($row->id).'" class="aj-app-check" aria-label="Select candidate '.esc_attr($row->full_name).'"></td><td><strong>'.esc_html($row->full_name).'</strong><small>'.esc_html($row->email).'</small></td><td>'.esc_html(get_the_title($row->job_id)).'<small>'.esc_html(self::job_code($row->job_id)).'</small></td><td><span class="bbs-pill">'.esc_html(self::stages()[$row->stage]??$row->stage).'</span></td><td><span class="aj-eligibility-pill aj-eligibility-'.esc_attr($row->eligibility_status).'">'.esc_html(Achuthan_Eligibility::label($row->eligibility_status)).'</span></td><td>'.esc_html(get_date_from_gmt($row->created_at,'d M Y')).'</td><td>'.esc_html((string)($row->candidate_rating??0)).'/5</td><td>'.esc_html($row->interview_at?:'—').'</td><td><a class="button" href="'.esc_url(admin_url('admin.php?page=bbs-applicants&view='.$row->id)).'">View / preview</a> <button type="submit" form="aj-delete-one-'.esc_attr($row->id).'" class="button button-link-delete aj-delete-row">Delete</button></td></tr>';
+        if(!$rows) echo '<tr><td colspan="9">No applications found.</td></tr>';
         echo '</tbody></table></form>';
         // Detached forms avoid invalid nested <form> markup within the bulk-action form.
         foreach($rows as $row) {
@@ -777,7 +807,7 @@ final class Achuthan_Jobs {
     }
     private static function applicant_detail($id) {
         global $wpdb; $table=self::table();
-        $r=$wpdb->get_row($wpdb->prepare("SELECT id, job_id, full_name, email, phone, portfolio, message, question_answers, candidate_rating, resume_filename, scan_status, stage, notes, interview_at, interview_time, interview_mode, offer_salary, joining_date, consent_at, created_at FROM $table WHERE id=%d",$id));
+        $r=$wpdb->get_row($wpdb->prepare("SELECT id, job_id, full_name, email, phone, portfolio, message, question_answers, candidate_rating, candidate_experience, eligibility_status, eligibility_detail, resume_filename, scan_status, stage, notes, interview_at, interview_time, interview_mode, offer_salary, joining_date, consent_at, created_at FROM $table WHERE id=%d",$id));
         if(!$r) { echo '<div class="wrap"><h1>Application not found</h1></div>';return; }
         $resume=''; // Resume retrieval uses POST + nonce; never expose a GET download token in access logs.
         $can_download=($r->scan_status!=='rejected');
@@ -786,6 +816,21 @@ final class Achuthan_Jobs {
         if ($can_download) $resume_actions.='<form method="post" action="'.esc_url(admin_url('admin-post.php')).'" class="aj-private-download"><input type="hidden" name="action" value="bbs_download_resume"><input type="hidden" name="id" value="'.esc_attr($r->id).'">'.wp_nonce_field('bbs_download_'.$r->id,'_wpnonce',true,false).'<button class="button" type="submit">Download PDF</button></form>';
 
         echo '<div class="wrap bbs-admin"><a href="'.esc_url(admin_url('admin.php?page=bbs-applicants')).'">← All applications</a><div class="bbs-admin-head"><p>APPLICATION #'.esc_html($id).'</p><h1>'.esc_html($r->full_name).'</h1><span>'.esc_html(get_the_title($r->job_id)).' · '.esc_html(self::job_code($r->job_id)).' · Applied '.esc_html(get_date_from_gmt($r->created_at,'d M Y')).'</span></div><div class="bbs-person-grid"><div class="bbs-panel"><h2>Candidate details</h2><dl><dt>Email</dt><dd><a href="'.esc_url('mailto:'.$r->email).'">'.esc_html($r->email).'</a></dd><dt>Phone</dt><dd>'.esc_html($r->phone?:'Not provided').'</dd><dt>Portfolio</dt><dd>'.($r->portfolio?'<a target="_blank" rel="noopener noreferrer" href="'.esc_url($r->portfolio).'">Open link ↗</a>':'Not provided').'</dd><dt>Resume</dt><dd>'.($can_download?$resume_actions:'<strong>Download locked</strong>').' <small>'.esc_html($r->resume_filename).' — '.esc_html($scan_label).'</small></dd><dt>Application</dt><dd>'.nl2br(esc_html($r->message?:'No message')).'</dd><dt>Consent recorded (UTC)</dt><dd>'.esc_html($r->consent_at).'</dd></dl></div>';
+        $details=json_decode((string)$r->eligibility_detail,true);
+        if(!is_array($details))$details=array();
+        echo '<div class="bbs-panel aj-eligibility-panel"><h2>Eligibility check <span class="aj-eligibility-pill aj-eligibility-'.esc_attr($r->eligibility_status).'">'.esc_html(Achuthan_Eligibility::label($r->eligibility_status)).'</span></h2>';
+        echo '<p>This is an HR decision aid based only on declared experience and objective answers. It does not reject, rank, or change the candidate stage.</p>';
+        if($r->candidate_experience!==null)echo '<p><strong>Relevant experience declared:</strong> '.esc_html($r->candidate_experience).' years</p>';
+        foreach(array('reasons'=>'Not met','unknown'=>'Manual review required') as $key=>$heading) {
+            if(!empty($details[$key])&&is_array($details[$key])){
+                echo '<h3>'.esc_html($heading).'</h3><ul>';
+                foreach($details[$key] as $reason)echo '<li>'.esc_html($reason).'</li>';
+                echo '</ul>';
+            }
+        }
+        echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="aj_recheck_eligibility"><input type="hidden" name="id" value="'.esc_attr($id).'">';
+        wp_nonce_field('aj_recheck_eligibility_'.$id);
+        echo '<button class="button" type="submit">Re-evaluate against current job requirements</button></form><p class="description">Requirements can change after an application is received. Re-evaluation is manual and audited.</p></div>';
         Achuthan_Questions::render_admin($id,$r->question_answers);
         echo '<div class="bbs-panel"><h2>Recruitment tracking</h2><form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="bbs_update_applicant"><input type="hidden" name="id" value="'.esc_attr($id).'">';
         wp_nonce_field('bbs_update_'.$id);
@@ -796,11 +841,25 @@ final class Achuthan_Jobs {
         echo '</select></label><label><strong>Offer salary (HR private)</strong><input type="text" maxlength="100" name="offer_salary" value="'.esc_attr($r->offer_salary).'" /></label><label><strong>Proposed joining date</strong><input type="date" name="joining_date" value="'.esc_attr($r->joining_date).'" /></label><label><strong>Private HR notes</strong><textarea rows="12" name="notes">'.esc_textarea($r->notes).'</textarea></label><button class="button button-primary">Save candidate</button></form>';
         echo '<hr><h2>Contact candidate</h2><p>Send a manual message to the candidate. No automated rejection, offer, or interview emails are sent when you change stages.</p><form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="aj_candidate_email"><input type="hidden" name="id" value="'.esc_attr($id).'">';
         wp_nonce_field('aj_candidate_email_'.$id);
-        echo '<label><strong>Subject</strong><input type="text" name="subject" required maxlength="150" value="Regarding your application to Achuthan"></label><label><strong>Message</strong><textarea name="body" rows="6" maxlength="5000" required></textarea></label><button class="button">Send candidate email</button></form>';
+        echo '<label><strong>Subject</strong><input type="text" name="subject" required maxlength="150" value="Regarding your application to '.esc_attr(self::employer_name()).'"></label><label><strong>Message</strong><textarea name="body" rows="6" maxlength="5000" required></textarea></label><button class="button">Send candidate email</button></form>';
         echo '<hr><form method="post" action="'.esc_url(admin_url('admin-post.php')).'" onsubmit="return confirm(\'Permanently delete this application, its resume and custom attachments? Other applications by this person will remain. This cannot be undone.\');"><input type="hidden" name="action" value="bbs_delete_applicant"><input type="hidden" name="id" value="'.esc_attr($id).'">';
         wp_nonce_field('bbs_delete_'.$id);
         echo '<button type="submit" class="button button-link-delete">Permanently delete application</button></form></div></div></div>';
         self::preview_modal();
+    }
+    public static function recheck_eligibility() {
+        self::require_hr();self::require_post();
+        $id=absint(self::data('id'));
+        check_admin_referer('aj_recheck_eligibility_'.$id);
+        global $wpdb;$table=self::table();
+        $r=$wpdb->get_row($wpdb->prepare("SELECT id,job_id,candidate_experience,question_answers FROM $table WHERE id=%d",$id));
+        if(!$r)wp_die('Application not found.','',array('response'=>404));
+        $answers=json_decode((string)$r->question_answers,true);
+        $result=Achuthan_Eligibility::evaluate($r->job_id,$r->candidate_experience,is_array($answers)?$answers:array());
+        $updated=$wpdb->update($table,array('eligibility_status'=>$result['status'],'eligibility_detail'=>wp_json_encode($result),'updated_at'=>current_time('mysql',true)),array('id'=>$id),array('%s','%s','%s'),array('%d'));
+        if($updated===false)wp_die('Eligibility update failed.','',array('response'=>500));
+        self::audit('eligibility_rechecked',$id,$result['status']);
+        wp_safe_redirect(admin_url('admin.php?page=bbs-applicants&view='.$id.'&updated=1'),303);exit;
     }
     public static function update_applicant() {
         self::require_hr(); self::require_post(); $id=absint(self::data('id'));
@@ -976,7 +1035,7 @@ final class Achuthan_Jobs {
         check_admin_referer('aj_jobs_template');
         nocache_headers();header('Content-Type: text/csv; charset=utf-8');header('Content-Disposition: attachment; filename="achuthan-jobs-template.csv"');
         $out=fopen('php://output','w'); fputcsv($out,self::csv_header());
-        fputcsv($out,array('','Graphic Designer','Create packaging and brand identity.','Creative','Bengaluru','Full-time','1-3 years','','2027-06-30','open','draft'));
+        fputcsv($out,array('','Project Coordinator','Coordinate team deliverables.','Operations','Remote','Full-time','1-3 years','','2027-06-30','open','draft'));
         fclose($out);exit;
     }
     public static function import_jobs() {
@@ -1105,11 +1164,11 @@ final class Achuthan_Jobs {
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="achuthan-jobs-applicants-'.gmdate('Ymd').'.csv"');
         $out=fopen('php://output','w');
-        fputcsv($out,array('ID','Job ID','Job','Full name','Email','Phone','Portfolio','Stage','Rating','Interview date','Application answers (JSON)','Applied at UTC'));
+        fputcsv($out,array('ID','Job ID','Job','Full name','Email','Phone','Portfolio','Stage','Eligibility','Experience (years)','Rating','Interview date','Application answers (JSON)','Applied at UTC'));
         for($offset=0;$offset<10000;$offset+=200) {
-            $rows=$wpdb->get_results($wpdb->prepare("SELECT id,job_id,full_name,email,phone,portfolio,stage,candidate_rating,interview_at,question_answers,created_at FROM $table ORDER BY id DESC LIMIT %d OFFSET %d",200,$offset));
+            $rows=$wpdb->get_results($wpdb->prepare("SELECT id,job_id,full_name,email,phone,portfolio,stage,eligibility_status,candidate_experience,candidate_rating,interview_at,question_answers,created_at FROM $table ORDER BY id DESC LIMIT %d OFFSET %d",200,$offset));
             foreach((array)$rows as $r) {
-                $vals=array($r->id,self::job_code($r->job_id),get_the_title($r->job_id),$r->full_name,$r->email,$r->phone,$r->portfolio,$r->stage,$r->candidate_rating,$r->interview_at,$r->question_answers,$r->created_at);
+                $vals=array($r->id,self::job_code($r->job_id),get_the_title($r->job_id),$r->full_name,$r->email,$r->phone,$r->portfolio,$r->stage,$r->eligibility_status,$r->candidate_experience,$r->candidate_rating,$r->interview_at,$r->question_answers,$r->created_at);
                 fputcsv($out,array_map(array(__CLASS__,'csv_safe'),$vals));
             }
             if(count((array)$rows)<200) break;
@@ -1123,6 +1182,8 @@ final class Achuthan_Jobs {
         $days=(int)get_option('bbs_retention_days',180);
         echo '<div class="wrap bbs-admin"><div class="bbs-admin-head"><p>ACHUTHAN JOBS / SETTINGS</p><h1>Recruitment settings</h1></div><div class="bbs-panel" style="max-width:640px"><form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="bbs_save_settings">';
         wp_nonce_field('bbs_save_settings');
+        echo '<label><strong>Employer / hiring organisation name</strong><input type="text" name="employer_name" maxlength="150" required value="'.esc_attr(self::employer_name()).'"></label>';
+        echo '<label><strong>Country (ISO two-letter code, optional)</strong><input type="text" maxlength="2" name="employer_country" placeholder="US, IN, GB, AU..." value="'.esc_attr(self::country()).'"></label>';
         echo '<label><strong>Recruitment notification email</strong><input type="email" name="hr_email" value="'.esc_attr($email).'" required></label><label><strong>Candidate data retention (days)</strong><input type="number" min="30" max="1095" name="retention_days" value="'.esc_attr($days).'" required></label><p><label><input type="checkbox" name="aj_own_careers_page" value="1" '.checked(get_option('aj_own_careers_page','1'),'1',false).'> <strong>Automatically control /careers/ with Achuthan Jobs</strong></label></p><p class="description">Recommended and enabled by default. Published jobs always come from the plugin database, even if the previous Careers page used static Elementor sections. Disable this option only if you want to use the [achuthan_jobs] shortcode in Elementor yourself.</p><p>Old applications and their resumes are permanently deleted by the daily WordPress scheduled task. WordPress cron relies on site traffic unless a server cron is configured.</p><button class="button button-primary">Save settings</button></form></div><p><strong>Live Careers URL:</strong> <a href="'.esc_url(home_url('/careers/')).'" target="_blank" rel="noopener">'.esc_html(home_url('/careers/')).'</a>. The WordPress page with slug <code>careers</code> must exist.</p><p><strong>Manual Elementor shortcode:</strong> <code>[achuthan_jobs]</code> (legacy <code>[bbs_careers]</code> also works) — used only if automatic Careers control is turned off.</p><p><strong>Privacy:</strong> Configure a Privacy Policy in Settings → Privacy, update recruitment data handling, and configure SMTP.</p></div>';
     }
     public static function save_settings() {
@@ -1130,6 +1191,10 @@ final class Achuthan_Jobs {
         $email=sanitize_email(self::data('hr_email'));
         $days=absint(self::data('retention_days'));
         if(!is_email($email) || $days<30 || $days>1095) wp_die('Invalid settings.');
+        $employer=trim(self::data('employer_name'));
+        $country=strtoupper(self::data('employer_country'));
+        if(!$employer||strlen($employer)>150||($country!==''&&!preg_match('/^[A-Z]{2}$/D',$country)))wp_die('Invalid employer details.','',array('response'=>400));
+        update_option('aj_employer_name',$employer);update_option('aj_employer_country',$country);
         update_option('bbs_hr_email',$email);update_option('bbs_retention_days',$days);
         update_option('aj_own_careers_page',isset($_POST['aj_own_careers_page']) && $_POST['aj_own_careers_page']==='1' ? '1':'0');
         wp_safe_redirect(admin_url('admin.php?page=bbs-recruitment-settings&saved=1'));exit;
@@ -1160,16 +1225,18 @@ final class Achuthan_Jobs {
         $types=array('Full-time'=>'FULL_TIME','Part-time'=>'PART_TIME','Contract'=>'CONTRACTOR','Internship'=>'INTERN','Temporary'=>'TEMPORARY');
         $data=array('@context'=>'https://schema.org','@type'=>'JobPosting','title'=>get_the_title($id),
             'description'=>wp_strip_all_tags(get_post_field('post_content',$id)),
-            'identifier'=>array('@type'=>'PropertyValue','name'=>'Achuthan','value'=>self::job_code($id)),
+            'identifier'=>array('@type'=>'PropertyValue','name'=>self::employer_name(),'value'=>self::job_code($id)),
             'datePosted'=>get_the_date('c',$id),
-            'hiringOrganization'=>array('@type'=>'Organization','name'=>'Achuthan','sameAs'=>home_url('/')),
+            'hiringOrganization'=>array('@type'=>'Organization','name'=>self::employer_name(),'sameAs'=>home_url('/')),
             'employmentType'=>$types[$type]??'FULL_TIME',
             'directApply'=>true,
         );
         $location=self::job_meta($id,'location');
-        if ($location) $data['jobLocation']=array('@type'=>'Place','address'=>array('@type'=>'PostalAddress','addressLocality'=>$location,'addressCountry'=>'IN'));
+        if ($location) { $address=array('@type'=>'PostalAddress','addressLocality'=>$location);
+            if(self::country()) $address['addressCountry']=self::country();
+            $data['jobLocation']=array('@type'=>'Place','address'=>$address); }
         $deadline=self::job_meta($id,'deadline');
-        if($deadline) $data['validThrough']=$deadline.'T23:59:59+05:30';
+        if($deadline) { $dt=DateTimeImmutable::createFromFormat('!Y-m-d H:i:s',$deadline.' 23:59:59',wp_timezone()); if($dt) $data['validThrough']=$dt->format('c'); }
         echo '<script type="application/ld+json">'.wp_json_encode($data,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>';
     }
     public static function privacy_eraser_register($erasers) {
@@ -1189,7 +1256,7 @@ final class Achuthan_Jobs {
     }
     public static function privacy_export($email,$page=1) {
         global $wpdb;$table=self::table();$limit=20;
-        $rows=$wpdb->get_results($wpdb->prepare("SELECT id,job_id,full_name,email,phone,portfolio,message,question_answers,resume_filename,stage,created_at FROM $table WHERE email=%s ORDER BY id LIMIT %d OFFSET %d",sanitize_email($email),$limit,($page-1)*$limit));
+        $rows=$wpdb->get_results($wpdb->prepare("SELECT id,job_id,full_name,email,phone,portfolio,message,question_answers,resume_filename,stage,eligibility_status,candidate_experience,created_at FROM $table WHERE email=%s ORDER BY id LIMIT %d OFFSET %d",sanitize_email($email),$limit,($page-1)*$limit));
         $data=array();
         foreach($rows as $r) {
             $data[]=array('group_id'=>'bbs-job-applications','group_label'=>'Job applications',
@@ -1200,12 +1267,15 @@ final class Achuthan_Jobs {
                     array('name'=>'Resume filename (resume stored privately; request a copy from HR)','value'=>$r->resume_filename),
                     array('name'=>'Applied at (UTC)','value'=>$r->created_at),
                     array('name'=>'Custom application answers','value'=>$r->question_answers),
+                    array('name'=>'Candidate-declared experience (years)','value'=>(string)$r->candidate_experience),
+                    array('name'=>'Rule-based HR eligibility flag','value'=>Achuthan_Eligibility::label($r->eligibility_status)),
                 ));
         }
         return array('data'=>$data,'done'=>count($rows)<$limit);
     }
 }
 require_once __DIR__.'/includes/class-achuthan-questions.php';
+require_once __DIR__.'/includes/class-achuthan-eligibility.php';
 register_activation_hook(__FILE__,array('Achuthan_Jobs','activate'));
 register_deactivation_hook(__FILE__,array('Achuthan_Jobs','deactivate'));
 Achuthan_Jobs::init();

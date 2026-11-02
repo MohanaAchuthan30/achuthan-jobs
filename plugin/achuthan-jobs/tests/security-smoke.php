@@ -59,6 +59,12 @@ function esc_url($s){return htmlspecialchars((string)$s,ENT_QUOTES);}
 function home_url($s=''){return 'http://localhost'.$s;}
 function plugin_dir_url($f){return 'http://localhost/wp-content/plugins/achuthan-jobs/';}
 function wp_enqueue_style(...$v){} function wp_enqueue_script(...$v){}
+function wp_style_is($name,$where){return isset($GLOBALS['mockRegisteredStyles'][$name]);}
+function wp_script_is($name,$where){return isset($GLOBALS['mockRegisteredScripts'][$name]);}
+function wp_register_style($name,...$args){$GLOBALS['mockRegisteredStyles'][$name]=$args;}
+function wp_register_script($name,...$args){$GLOBALS['mockRegisteredScripts'][$name]=$args;}
+function wp_parse_args($args,$defaults){return array_merge((array)$defaults,(array)$args);}
+function wp_trim_words($text,$count,$more='…'){return implode(' ',array_slice(preg_split('/\s+/',trim((string)$text)),0,$count)).$more;}
 function wp_date($format){return date($format);}
 function get_the_title($id){return 'Graphic Designer';}
 function get_date_from_gmt($date,$format){return '30 Oct 2026';}
@@ -83,7 +89,7 @@ require dirname(__DIR__).'/achuthan-jobs.php';
 $pass=0;
 function check($condition,$message){global $pass; if(!$condition){fwrite(STDERR,"FAIL: $message\n");exit(1);} $pass++; echo "PASS: $message\n";}
 function private_call($method,...$args){$r=new ReflectionMethod(Achuthan_Jobs::class,$method);return $r->invoke(null,...$args);}
-check(Achuthan_Jobs::VERSION==='0.16.0','Version registered');
+check(Achuthan_Jobs::VERSION==='0.17.0','Version registered');
 check(isset($GLOBALS['hooks']['shortcode_achuthan_jobs']),'Shortcode registered');
 check(isset($GLOBALS['hooks']['wp_ajax_nopriv_aj_live_jobs']),'Public jobs refresh endpoint registered');
 check(isset($GLOBALS['hooks']['wp_ajax_nopriv_aj_extra_questions']),'Public additional job questions endpoint registered');
@@ -409,3 +415,27 @@ check(Achuthan_Eligibility::evaluate_rules(0,[$r],null,[['id'=>'q_checkboxall','
 check(Achuthan_Eligibility::evaluate_rules(0,[$r],null,[['id'=>'q_checkboxall','value'=>['Figma','Illustrator']]])['status']==='meets','All-choice rule passes matched list');
 check(str_contains(file_get_contents(dirname(__DIR__).'/assets/questions-admin.js'),'aj-screen-date'),'Admin UI switches eligibility rule controls by question type');
 echo "ALL $pass MOCK ASSERTIONS PASSED. REAL WP INTEGRATION REMAINS UNTESTED.\n";
+
+// v0.17 native Elementor widget must not duplicate the automatic Careers fallback.
+$GLOBALS['mockElementorData']='[{"widgetType":"achuthan_jobs_list","settings":{"layout":"grid"}}]';
+check(Achuthan_Jobs::careers_content_fallback('<p>Native widget</p>')==='<p>Native widget</p>','Native Elementor widget suppresses legacy appended listing');
+$GLOBALS['mockElementorData']='';
+$GLOBALS['testJobs']=[(object)['ID'=>123,'post_title'=>'Graphic Designer','post_content'=>'Creative brand work']];
+$GLOBALS['mockMeta'][123]['_bbs_department']='Creative';
+$GLOBALS['mockMeta'][123]['_bbs_location']='Bengaluru';
+$GLOBALS['mockMeta'][123]['_bbs_type']='Full-time';
+$widget=Achuthan_Jobs::render_elementor_list(['layout'=>'grid','columns'=>3,'columns_tablet'=>2,'columns_mobile'=>1,'heading'=>'yes','filters'=>'yes','show_excerpt'=>'yes']);
+check(str_contains($widget,'aj-layout-grid') && str_contains($widget,'--aj-columns:3;'),'Widget outputs live grid with desktop columns');
+check(str_contains($widget,'data-aj-columns-tablet="2"') && str_contains($widget,'data-aj-columns-mobile="1"'),'Tablet and mobile column configuration preserved in markup');
+check(str_contains($widget,'aj-card-excerpt') && str_contains($widget,'Creative brand work'),'Optional description shows sanitized excerpt');
+check(str_contains($widget,'data-bbs-ajax=') && str_contains($widget,'Graphic Designer'),'Widget lists live WordPress vacancy records');
+$widget=Achuthan_Jobs::render_elementor_list(['layout'=>'random','columns'=>99,'heading'=>'no','filters'=>'no','show_job_id'=>'no']);
+check(str_contains($widget,'aj-layout-list') && str_contains($widget,'--aj-columns:4;'),'Unknown layout falls back and columns are clamped');
+check(!str_contains($widget,'<h2>Open positions') && !str_contains($widget,'class="bbs-filters"'),'Header and filters can be hidden independently');
+check(!str_contains($widget,'AJ-000123'),'Job ID visibility is configurable');
+$widget=Achuthan_Jobs::render_elementor_list(['layout'=>'grid','department'=>'Sales']);
+check(str_contains($widget,'No current openings') && !str_contains($widget,'Graphic Designer'),'Department filtering applies server-side');
+$widget=Achuthan_Jobs::render_elementor_list(['heading_text'=>'<script>alert(1)</script> Open roles','subheading_text'=>'Join <b>now</b>']);
+check(!str_contains($widget,'<script>') && !str_contains($widget,'<b>now</b>'),'Editor-entered heading and intro are sanitized');
+$GLOBALS['testJobs']=[];
+echo "ALL $pass SECURITY AND ELEMENTOR REGRESSION MOCK ASSERTIONS PASSED.\n";

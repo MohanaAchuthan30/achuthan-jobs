@@ -6,7 +6,7 @@ plugin=(root/'plugin/achuthan-jobs/achuthan-jobs.php').read_text()
 job=(root/'plugin/achuthan-jobs/templates/single-bbs_job.php').read_text()
 assert ' * Plugin Name: Achuthan Jobs' in plugin
 assert ' * Author: Achuthan' in plugin
-assert "const VERSION = '0.16.0'" in plugin
+assert "const VERSION = '0.17.0'" in plugin
 assert 'BIG BOX STUDIO' not in plugin + job
 assert 'Big Box Studio' not in plugin + job
 assert 'self::employer_name()' in plugin

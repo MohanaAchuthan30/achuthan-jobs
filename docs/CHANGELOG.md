@@ -1,3 +1,12 @@
+## 0.17.0 — Native Elementor Job Listings Widget
+
+- Register a native Elementor Free widget in the Achuthan Jobs category, usable inside any section/container.
+- Four layouts plus responsive columns, job filters and display controls.
+- Elementor Style tab supports card/hover backgrounds, featured card colour, accent, text, gap, radius and padding.
+- Extended live AJAX rendering retains the selected widget options; prevents duplicate Careers fallback.
+- Existing job post type, job URLs, applications and shortcodes are backward compatible.
+- Added Elementor widget mock tests, updated starter template and setup checklist.
+
 # Changelog
 
 ## 0.16.0 — Email customisation, HR attachments and eligibility improvements

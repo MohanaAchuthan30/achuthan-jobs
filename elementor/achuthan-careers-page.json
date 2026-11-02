@@ -1,6 +1,6 @@
 {
   "version": "0.4",
-  "title": "Achuthan Careers \u2014 Editable Elementor Page",
+  "title": "Achuthan Careers — Native Job Listings Widget",
   "type": "page",
   "page_settings": {
     "template": "default"
@@ -254,9 +254,32 @@
             {
               "id": "0000000b",
               "elType": "widget",
-              "widgetType": "shortcode",
+              "widgetType": "achuthan_jobs_list",
               "settings": {
-                "shortcode": "[achuthan_jobs_list heading=\"no\" filters=\"yes\"]"
+                "layout": "grid",
+                "columns": "3",
+                "columns_tablet": "2",
+                "columns_mobile": "1",
+                "heading": "no",
+                "filters": "yes",
+                "limit": 12,
+                "order": "DESC",
+                "show_job_id": "yes",
+                "show_meta": "yes",
+                "show_excerpt": "yes",
+                "card_background": "#FFFFFF",
+                "card_hover_background": "#F8FAED",
+                "accent": "#E3FF04",
+                "gap": {
+                  "unit": "px",
+                  "size": 18,
+                  "sizes": []
+                },
+                "radius": {
+                  "unit": "px",
+                  "size": 12,
+                  "sizes": []
+                }
               },
               "elements": []
             }
@@ -309,7 +332,7 @@
               "elType": "widget",
               "widgetType": "heading",
               "settings": {
-                "title": "Can\u2019t find your next role?",
+                "title": "Can’t find your next role?",
                 "header_size": "h2",
                 "title_color": "#141812",
                 "typography_typography": "custom",

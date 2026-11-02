@@ -39,6 +39,17 @@
       url.searchParams.set('action', 'aj_live_jobs');
       url.searchParams.set('heading', list.dataset.ajHeading || '1');
       url.searchParams.set('filters', list.dataset.ajFilters || '1');
+      // Preserve native Elementor widget settings across the uncached refresh.
+      [
+        ['layout','ajLayout'],['columns','ajColumns'],
+        ['columns_tablet','ajColumnsTablet'],['columns_mobile','ajColumnsMobile'],
+        ['limit','ajLimit'],['department','ajDepartment'],['job_type','ajJobType'],
+        ['order','ajOrder'],['heading_text','ajHeadingText'],
+        ['subheading_text','ajSubheadingText'],['show_meta','ajShowMeta'],
+        ['show_job_id','ajShowJobId'],['show_excerpt','ajShowExcerpt'],['widget','ajWidget']
+      ].forEach(function (item) {
+        if (list.dataset[item[1]] !== undefined) url.searchParams.set(item[0], list.dataset[item[1]]);
+      });
       url.searchParams.set('_aj', String(Date.now()));
       var response = await fetch(url.toString(), {cache: 'no-store', credentials: 'same-origin'});
       if (!response.ok) throw new Error('Jobs refresh failed');
@@ -253,9 +264,11 @@
   function installElementorHook() {
     if (!window.elementorFrontend?.hooks || window.achuthanJobsElementorHooked) return;
     window.achuthanJobsElementorHooked = true;
-    window.elementorFrontend.hooks.addAction('frontend/element_ready/shortcode.default', function (scope) {
-      var node = scope?.[0] || scope;
-      if (node?.querySelectorAll) boot(node);
+    ['shortcode.default','achuthan_jobs_list.default'].forEach(function (widgetName) {
+      window.elementorFrontend.hooks.addAction('frontend/element_ready/'+widgetName, function (scope) {
+        var node = scope?.[0] || scope;
+        if (node?.querySelectorAll) boot(node);
+      });
     });
   }
   installElementorHook();

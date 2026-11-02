@@ -142,3 +142,56 @@
 .bbs-elementor-list .bbs-job-card{padding-left:0;padding-right:0}
 .bbs-elementor-list .bbs-job-card:hover{padding-left:12px}
 @media(max-width:767px){.bbs-elementor-list .bbs-list{padding:8px 0 20px}}
+
+/* v0.17: Native Elementor Achuthan Jobs widget layouts. */
+.bbs-careers.aj-widget{background:transparent;--aj-gap:18px;--aj-radius:12px;overflow:visible}
+.bbs-careers.aj-widget .bbs-list{width:100%;padding:0 0 25px;margin:0;max-width:100%}
+.bbs-careers.aj-widget .bbs-heading{margin-bottom:24px}
+.bbs-careers.aj-widget .bbs-heading h2{font-size:clamp(25px,3vw,44px)}
+.bbs-careers.aj-widget .bbs-cards{min-width:0}
+.bbs-careers.aj-widget .bbs-job-card{min-width:0;color:var(--bbs-ink);text-decoration:none}
+.bbs-careers.aj-widget .bbs-job-card .aj-card-main{min-width:0;flex:1}
+.bbs-careers.aj-widget .bbs-job-card .aj-card-excerpt{color:var(--bbs-mute);font-size:12px;line-height:1.65;margin:7px 0 12px;overflow-wrap:anywhere}
+.bbs-careers.aj-widget .bbs-job-card:hover{padding-left:25px;transform:none}
+.bbs-careers.aj-widget .aj-layout-grid .bbs-cards,
+.bbs-careers.aj-widget .aj-layout-compact .bbs-cards,
+.bbs-careers.aj-widget .aj-layout-featured .bbs-cards{display:grid;grid-template-columns:repeat(var(--aj-columns,3),minmax(0,1fr));gap:var(--aj-gap,18px)}
+.bbs-careers.aj-widget .aj-layout-grid .bbs-job-card,
+.bbs-careers.aj-widget .aj-layout-compact .bbs-job-card,
+.bbs-careers.aj-widget .aj-layout-featured .bbs-job-card{border:1px solid #e5e8e0;border-radius:var(--aj-radius,12px);padding:var(--aj-card-padding,22px);min-height:200px;display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;gap:18px;background:var(--aj-card-bg,#fff);transition:transform .22s ease,border-color .22s ease,background-color .22s ease}
+.bbs-careers.aj-widget .aj-layout-grid .bbs-job-card:hover,
+.bbs-careers.aj-widget .aj-layout-compact .bbs-job-card:hover,
+.bbs-careers.aj-widget .aj-layout-featured .bbs-job-card:hover{transform:translateY(-3px);border-color:#bccd83;background:var(--aj-hover-bg,#f8faed)}
+.bbs-careers.aj-widget .aj-layout-grid .bbs-job-card h3,
+.bbs-careers.aj-widget .aj-layout-compact .bbs-job-card h3,
+.bbs-careers.aj-widget .aj-layout-featured .bbs-job-card h3{font-size:clamp(18px,1.75vw,24px);margin:10px 0 9px}
+.bbs-careers.aj-widget .aj-layout-grid .bbs-card-arrow,
+.bbs-careers.aj-widget .aj-layout-compact .bbs-card-arrow,
+.bbs-careers.aj-widget .aj-layout-featured .bbs-card-arrow{align-self:flex-end;width:34px;min-width:34px;height:34px}
+.bbs-careers.aj-widget .aj-layout-list .bbs-cards{display:flex;flex-direction:column;gap:0}
+.bbs-careers.aj-widget .aj-layout-list .bbs-job-card{border-radius:0;padding:var(--aj-card-padding,22px 12px);min-height:122px}
+.bbs-careers.aj-widget .aj-layout-compact .bbs-job-card{min-height:142px;padding:var(--aj-card-padding,16px);gap:8px}
+.bbs-careers.aj-widget .aj-layout-compact .bbs-job-card h3{font-size:17px;margin:7px 0}
+.bbs-careers.aj-widget .aj-layout-compact .bbs-card-arrow{width:27px;height:27px;min-width:27px}
+.bbs-careers.aj-widget .aj-layout-compact .bbs-chiprow{font-size:11px}
+.bbs-careers.aj-widget .aj-layout-featured .bbs-job-card:first-child{grid-column:span 2;min-height:256px;background:var(--aj-featured-bg,#f9fbe8)}
+.bbs-careers.aj-widget .aj-layout-featured .bbs-job-card:first-child h3{font-size:clamp(23px,2.7vw,34px)}
+.bbs-careers.aj-widget .bbs-filters{grid-template-columns:minmax(150px,2fr) minmax(125px,1fr) minmax(125px,1fr)}
+@media(max-width:1024px){
+  .bbs-careers.aj-widget .aj-layout-grid .bbs-cards,
+  .bbs-careers.aj-widget .aj-layout-compact .bbs-cards,
+  .bbs-careers.aj-widget .aj-layout-featured .bbs-cards{grid-template-columns:repeat(var(--aj-columns-tablet,2),minmax(0,1fr))}
+  .bbs-careers.aj-widget .aj-layout-featured .bbs-job-card:first-child{grid-column:span 1}
+}
+@media(max-width:767px){
+  .bbs-careers.aj-widget .aj-layout-grid .bbs-cards,
+  .bbs-careers.aj-widget .aj-layout-compact .bbs-cards,
+  .bbs-careers.aj-widget .aj-layout-featured .bbs-cards{grid-template-columns:repeat(var(--aj-columns-mobile,1),minmax(0,1fr))}
+  .bbs-careers.aj-widget .bbs-filters{grid-template-columns:1fr}
+  .bbs-careers.aj-widget .aj-layout-grid .bbs-job-card,
+  .bbs-careers.aj-widget .aj-layout-featured .bbs-job-card{min-height:155px;padding:var(--aj-card-padding,18px)}
+  .bbs-careers.aj-widget .aj-layout-featured .bbs-job-card:first-child{min-height:175px}
+  .bbs-careers.aj-widget .bbs-list{padding:0 0 16px}
+}
+
+.bbs-careers.aj-widget .aj-layout-featured .bbs-job-card:first-child:hover{background:var(--aj-hover-bg,#f8faed)}

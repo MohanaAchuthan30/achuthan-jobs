@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Achuthan Jobs
  * Description: Multi-site WordPress recruitment dashboard with jobs, applicant management, and transparent HR eligibility checks.
- * Version: 0.16.0
+ * Version: 0.17.0
  * Requires at least: 6.2
  * Requires PHP: 8.0
  * License: Proprietary (internal use only)
@@ -23,7 +23,7 @@ if ( class_exists( 'BBS_Careers', false ) ) {
 }
 
 final class Achuthan_Jobs {
-    const VERSION = '0.16.0';
+    const VERSION = '0.17.0';
     const MAX_CSV_BYTES = 1048576;
     const MAX_CSV_ROWS = 100;
     // Legacy internal identifiers are intentionally retained for upgrade safety.
@@ -218,7 +218,10 @@ final class Achuthan_Jobs {
         add_shortcode('bbs_careers', array(__CLASS__,'shortcode'));
         add_shortcode('achuthan_jobs', array(__CLASS__,'shortcode'));
         add_shortcode('achuthan_jobs_list', array(__CLASS__,'list_shortcode'));
+        add_action('wp_enqueue_scripts', array(__CLASS__,'register_frontend_assets'), 1);
         add_action('wp_enqueue_scripts', array(__CLASS__,'frontend_assets'));
+        add_action('elementor/widgets/register', array(__CLASS__,'register_elementor_widget'));
+        add_action('elementor/elements/categories_registered', array(__CLASS__,'register_elementor_category'));
         add_action('admin_menu', array(__CLASS__,'menus'));
         add_action('admin_enqueue_scripts', array(__CLASS__,'admin_assets'));
         add_action('wp_ajax_nopriv_aj_live_jobs', array(__CLASS__,'live_jobs'));
@@ -324,20 +327,48 @@ final class Achuthan_Jobs {
         $deadline = get_post_meta($job_id,'_bbs_deadline',true);
         return !($deadline && wp_date('Y-m-d') > $deadline);
     }
+    /** Register handles before Elementor scans widget dependencies. */
+    public static function register_frontend_assets() {
+        if (!wp_style_is('achuthan-jobs-poppins','registered')) {
+            wp_register_style('achuthan-jobs-poppins','https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap',array(),null);
+        }
+        if (!wp_style_is('achuthan-jobs-front','registered')) {
+            wp_register_style('achuthan-jobs-front',plugin_dir_url(__FILE__).'assets/front.css',array('achuthan-jobs-poppins'),self::VERSION);
+        }
+        if (!wp_script_is('achuthan-jobs-front','registered')) {
+            wp_register_script('achuthan-jobs-front',plugin_dir_url(__FILE__).'assets/front.js',array(),self::VERSION,true);
+        }
+    }
     public static function frontend_assets() {
-        // Enqueue only when rendered (including inside Elementor Shortcode widgets).
-        // The fallback for job singular pages is handled by job_content().
+        self::register_frontend_assets();
         $id=get_queried_object_id();
         $content=(string)get_post_field('post_content',$id);
         $elementor=get_post_meta($id,'_elementor_data',true);
-        // Elementor stores Shortcode widgets in _elementor_data, not post_content.
+        // Elementor stores widgets in JSON post meta, not in post_content.
         if (is_singular(self::CPT) || is_page('careers') || self::has_jobs_shortcode($content)
-            || (is_string($elementor) && self::has_jobs_shortcode($elementor))) self::enqueue_front_assets();
+            || (is_string($elementor) && (self::has_jobs_shortcode($elementor) || self::has_elementor_jobs_widget($elementor)))) {
+            self::enqueue_front_assets();
+        }
     }
     private static function enqueue_front_assets() {
-        wp_enqueue_style('achuthan-jobs-poppins','https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap',array(),null);
-        wp_enqueue_style('achuthan-jobs-front',plugin_dir_url(__FILE__).'assets/front.css',array(),self::VERSION);
-        wp_enqueue_script('achuthan-jobs-front',plugin_dir_url(__FILE__).'assets/front.js',array(),self::VERSION,true);
+        self::register_frontend_assets();
+        wp_enqueue_style('achuthan-jobs-poppins');
+        wp_enqueue_style('achuthan-jobs-front');
+        wp_enqueue_script('achuthan-jobs-front');
+    }
+    /** Only invoked by Elementor when Elementor is active and ready. */
+    public static function register_elementor_widget($widgets_manager) {
+        if (!class_exists('\Elementor\Widget_Base')) return;
+        require_once __DIR__.'/includes/class-achuthan-elementor-widget.php';
+        $widgets_manager->register(new Achuthan_Jobs_Elementor_Widget());
+    }
+    public static function register_elementor_category($elements_manager) {
+        if (is_object($elements_manager) && method_exists($elements_manager,'add_category')) {
+            $elements_manager->add_category('achuthan-jobs',array('title'=>'Achuthan Jobs','icon'=>'eicon-post-list'));
+        }
+    }
+    private static function has_elementor_jobs_widget($json) {
+        return is_string($json) && preg_match('/"widgetType"\s*:\s*"achuthan_jobs_list"/',$json)===1;
     }
     private static function arrow_svg() { return '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg>'; }
     private static function job_meta($id, $key) { return (string)get_post_meta($id, '_bbs_'.$key,true); }
@@ -352,14 +383,45 @@ final class Achuthan_Jobs {
         return !$existing;
     }
 
-    /** Elementor-ready, live jobs list. Build hero/culture/CTA in native Elementor widgets.
-     * Supported attrs: heading=yes|no, filters=yes|no. JS retains these on refresh. */
+    /** One validated renderer serves shortcode, Elementor, and uncached AJAX. */
+    private static function list_options($args=array()) {
+        $defaults=array(
+            'heading'=>'yes', 'filters'=>'yes', 'layout'=>'list',
+            'columns'=>3, 'columns_tablet'=>2, 'columns_mobile'=>1,
+            'limit'=>0, 'department'=>'', 'job_type'=>'', 'order'=>'DESC',
+            'heading_text'=>'Open positions',
+            'subheading_text'=>'Explore our current job openings.',
+            'show_meta'=>'yes', 'show_job_id'=>'yes', 'show_excerpt'=>'no',
+            'widget'=>false,
+        );
+        $args=wp_parse_args((array)$args,$defaults);
+        foreach (array('heading','filters','show_meta','show_job_id','show_excerpt') as $key) {
+            $args[$key]=in_array($args[$key],array('yes','true','1',true,1),true);
+        }
+        $args['widget']=(bool)$args['widget'];
+        $args['layout']=in_array($args['layout'],array('list','grid','compact','featured'),true)?$args['layout']:'list';
+        foreach (array('columns','columns_tablet','columns_mobile') as $key) {
+            $args[$key]=max(1,min($key==='columns'?4:($key==='columns_tablet'?3:2),(int)$args[$key]));
+        }
+        $args['limit']=max(0,min(50,(int)$args['limit']));
+        $args['order']=strtoupper((string)$args['order'])==='ASC'?'ASC':'DESC';
+        $args['department']=substr(sanitize_text_field((string)$args['department']),0,100);
+        $args['job_type']=in_array($args['job_type'],array('','Full-time','Part-time','Contract','Internship','Temporary'),true)?$args['job_type']:'';
+        $args['heading_text']=substr(sanitize_text_field((string)$args['heading_text']),0,120);
+        $args['subheading_text']=substr(sanitize_textarea_field((string)$args['subheading_text']),0,220);
+        return $args;
+    }
     public static function list_shortcode($atts=array()) {
-        $atts=shortcode_atts(array('heading'=>'yes','filters'=>'yes'), (array)$atts, 'achuthan_jobs_list');
-        $heading=in_array(strtolower((string)$atts['heading']),array('yes','true','1'),true);
-        $filters=in_array(strtolower((string)$atts['filters']),array('yes','true','1'),true);
+        // Existing Elementor Shortcode widgets remain fully backward compatible.
+        $options=self::list_options($atts);
         self::enqueue_front_assets();
-        return '<section class="bbs-careers bbs-elementor-list" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'" aria-label="'.esc_attr(self::employer_name()).' job openings">'.self::render_list($heading,$filters).'</section>';
+        return '<section class="bbs-careers bbs-elementor-list" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'" aria-label="'.esc_attr(self::employer_name()).' job openings">'.self::render_list($options).'</section>';
+    }
+    public static function render_elementor_list($settings=array()) {
+        $settings['widget']=true;
+        $options=self::list_options($settings);
+        self::enqueue_front_assets();
+        return '<section class="bbs-careers bbs-elementor-list aj-widget" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'" aria-label="'.esc_attr(self::employer_name()).' job openings">'.self::render_list($options).'</section>';
     }
     /** Migration safety: keep live jobs visible after removing the old template
      * override. Once an editor places the shortcode, nothing is injected. */
@@ -369,7 +431,7 @@ final class Achuthan_Jobs {
         $raw=(string)get_post_field('post_content',$id);
         $data=get_post_meta($id,'_elementor_data',true);
         $editor_json=is_string($data)?$data:'';
-        if (self::has_jobs_shortcode($raw) || self::has_jobs_shortcode($editor_json)) return $content;
+        if (self::has_jobs_shortcode($raw) || self::has_jobs_shortcode($editor_json) || self::has_elementor_jobs_widget($editor_json)) return $content;
         return $content . self::list_shortcode(array('heading'=>'yes','filters'=>'yes'));
     }
     private static function has_jobs_shortcode($content) {
@@ -386,47 +448,85 @@ final class Achuthan_Jobs {
         echo '<div class="bbs-bottom"><span class="bbs-overline">YOUR NEXT OPPORTUNITY</span><h2>Find a role<br>that fits.</h2><p>All advertised positions are managed by '.esc_html(self::employer_name()).'.</p></div></section>';
         return ob_get_clean();
     }
-    /** Server-side output for SEO plus an uncached AJAX refresh for the live Careers page. */
-    private static function render_list($heading=true,$filters=true) {
-        $jobs=get_posts(array('post_type'=>self::CPT,'post_status'=>'publish','numberposts'=>-1,'orderby'=>'date','order'=>'DESC','suppress_filters'=>false));
+    /** Server-rendered, crawlable job listings also refreshed with no-cache AJAX. */
+    private static function render_list($options=array()) {
+        $o=self::list_options($options);
+        $jobs=get_posts(array('post_type'=>self::CPT,'post_status'=>'publish','numberposts'=>-1,
+            'orderby'=>'date','order'=>$o['order'],'suppress_filters'=>false));
+        $eligible=array();
+        foreach ($jobs as $job) {
+            if (!self::open($job->ID)) continue;
+            if ($o['department']!=='' && strcasecmp(self::job_meta($job->ID,'department'),$o['department'])!==0) continue;
+            if ($o['job_type']!=='' && self::job_meta($job->ID,'type')!==$o['job_type']) continue;
+            $eligible[]=$job;
+            if ($o['limit']>0 && count($eligible)>=$o['limit']) break;
+        }
+        $props=array(
+            'layout'=>$o['layout'], 'columns'=>$o['columns'], 'columns-tablet'=>$o['columns_tablet'],
+            'columns-mobile'=>$o['columns_mobile'],'limit'=>$o['limit'], 'department'=>$o['department'],
+            'job-type'=>$o['job_type'], 'order'=>$o['order'],
+            'heading-text'=>$o['heading_text'],'subheading-text'=>$o['subheading_text'],
+            'show-meta'=>(int)$o['show_meta'],'show-job-id'=>(int)$o['show_job_id'],
+            'show-excerpt'=>(int)$o['show_excerpt'], 'widget'=>(int)$o['widget'],
+        );
+        $data='';
+        foreach($props as $name=>$value) $data.=' data-aj-'.esc_attr($name).'="'.esc_attr($value).'"';
+        $classes='bbs-list aj-layout-'.esc_attr($o['layout']);
+        $style='--aj-columns:'.(int)$o['columns'].';--aj-columns-tablet:'.(int)$o['columns_tablet'].';--aj-columns-mobile:'.(int)$o['columns_mobile'].';';
         ob_start();
-        echo '<div id="bbs-openings" class="bbs-list" data-bbs-live="1" data-aj-heading="'.($heading?'1':'0').'" data-aj-filters="'.($filters?'1':'0').'">';
-        if ($heading) echo '<div class="bbs-heading"><div><span class="bbs-overline">JOIN OUR TEAM</span><h2>Open positions<span class="bbs-count"></span></h2></div><p>Jobs shown here update automatically when our team publishes or closes a vacancy.</p></div>';
-        if ($filters) {
-        echo '<div class="bbs-filters"><label class="bbs-search"><span class="screen-reader-text">Search jobs</span><input type="search" data-bbs-filter="query" placeholder="Search roles or skills"></label><label><span class="screen-reader-text">Department</span><select data-bbs-filter="department"><option value="">All departments</option>';
-        $departments = array(); $types = array();
-        foreach ($jobs as $job) { if (self::open($job->ID)) { $d=self::job_meta($job->ID,'department'); $t=self::job_meta($job->ID,'type'); if ($d) $departments[$d]=$d; if ($t) $types[$t]=$t; } }
-        natcasesort($departments); natcasesort($types);
-        foreach($departments as $d) echo '<option value="'.esc_attr(strtolower($d)).'">'.esc_html($d).'</option>';
-        echo '</select></label><label><span class="screen-reader-text">Employment type</span><select data-bbs-filter="type"><option value="">All job types</option>';
-        foreach($types as $t) echo '<option value="'.esc_attr(strtolower($t)).'">'.esc_html($t).'</option>';
-        echo '</select></label></div>';
+        echo '<div '.($o['widget']?'':'id="bbs-openings" ').'class="'.$classes.'" style="'.esc_attr($style).'" data-bbs-live="1" data-aj-heading="'.($o['heading']?'1':'0').'" data-aj-filters="'.($o['filters']?'1':'0').'"'.$data.'>';
+        if ($o['heading']) {
+            echo '<div class="bbs-heading"><div><span class="bbs-overline">JOIN OUR TEAM</span><h2>'.esc_html($o['heading_text']).'<span class="bbs-count"></span></h2></div><p>'.esc_html($o['subheading_text']).'</p></div>';
+        }
+        if ($o['filters']) {
+            echo '<div class="bbs-filters"><label class="bbs-search"><span class="screen-reader-text">Search jobs</span><input type="search" data-bbs-filter="query" placeholder="Search roles or skills"></label><label><span class="screen-reader-text">Department</span><select data-bbs-filter="department"><option value="">All departments</option>';
+            $departments=array();$types=array();
+            foreach ($eligible as $job) {
+                $d=self::job_meta($job->ID,'department');$t=self::job_meta($job->ID,'type');
+                if ($d) $departments[$d]=$d;
+                if ($t) $types[$t]=$t;
+            }
+            natcasesort($departments);natcasesort($types);
+            foreach ($departments as $d) echo '<option value="'.esc_attr(strtolower($d)).'">'.esc_html($d).'</option>';
+            echo '</select></label><label><span class="screen-reader-text">Employment type</span><select data-bbs-filter="type"><option value="">All job types</option>';
+            foreach ($types as $t) echo '<option value="'.esc_attr(strtolower($t)).'">'.esc_html($t).'</option>';
+            echo '</select></label></div>';
         }
         echo '<div class="bbs-cards">';
-        $count=0;
-        foreach($jobs as $job) {
-            if (!self::open($job->ID)) continue;
-            $count++;
-            $dept=self::job_meta($job->ID,'department'); $loc=self::job_meta($job->ID,'location');
-            $type=self::job_meta($job->ID,'type'); $exp=self::job_meta($job->ID,'experience');
+        foreach($eligible as $job) {
+            $dept=self::job_meta($job->ID,'department');$loc=self::job_meta($job->ID,'location');
+            $type=self::job_meta($job->ID,'type');$exp=self::job_meta($job->ID,'experience');
             $search=strtolower($job->post_title.' '.$job->post_content.' '.$dept.' '.$loc.' '.$type);
             echo '<a class="bbs-job-card" href="'.esc_url(get_permalink($job)).'" data-query="'.esc_attr(wp_strip_all_tags($search)).'" data-department="'.esc_attr(strtolower($dept)).'" data-type="'.esc_attr(strtolower($type)).'">';
-            echo '<div><span class="bbs-tag">'.esc_html($dept?:'Careers').'</span> <span class="bbs-job-id">'.esc_html(self::job_code($job->ID)).'</span><h3>'.esc_html(get_the_title($job)).'</h3><div class="bbs-chiprow">';
-            foreach(array($loc,$type,$exp) as $v) if($v) echo '<span>'.esc_html($v).'</span>';
-            echo '</div></div><span class="bbs-card-arrow" aria-hidden="true">'.self::arrow_svg().'</span></a>';
+            echo '<div class="aj-card-main"><span class="bbs-tag">'.esc_html($dept?:'Careers').'</span>';
+            if($o['show_job_id']) echo ' <span class="bbs-job-id">'.esc_html(self::job_code($job->ID)).'</span>';
+            echo '<h3>'.esc_html(get_the_title($job)).'</h3>';
+            if ($o['show_excerpt']) echo '<p class="aj-card-excerpt">'.esc_html(wp_trim_words(wp_strip_all_tags($job->post_content),21,'…')).'</p>';
+            if ($o['show_meta']) {
+                echo '<div class="bbs-chiprow">';
+                foreach(array($loc,$type,$exp) as $v) if($v) echo '<span>'.esc_html($v).'</span>';
+                echo '</div>';
+            }
+            echo '</div><span class="bbs-card-arrow" aria-hidden="true">'.self::arrow_svg().'</span></a>';
         }
         echo '</div><p class="bbs-no-results" hidden>No roles match your search. Try a different keyword or filter.</p>';
-        if(!$count) echo '<div class="bbs-empty"><h3>No current openings</h3><p>There aren’t any published vacancies right now. Please check back later.</p></div>';
+        if (!$eligible) echo '<div class="bbs-empty"><h3>No current openings</h3><p>There aren’t any published vacancies matching this section.</p></div>';
         echo '</div>';
         return ob_get_clean();
     }
     public static function live_jobs() {
-        // Public endpoint contains only already-published job descriptions and links.
+        // All filters are strictly validated before rendering public job records.
         nocache_headers();
-        // Only boolean display options are accepted; this endpoint returns public jobs.
-        $heading=(!isset($_GET['heading']) || sanitize_key(wp_unslash($_GET['heading']))!=='0');
-        $filters=(!isset($_GET['filters']) || sanitize_key(wp_unslash($_GET['filters']))!=='0');
-        wp_send_json_success(array('html'=>self::render_list($heading,$filters)));
+        $raw=array();
+        foreach (array('heading','filters','layout','columns','columns_tablet','columns_mobile','limit',
+            'department','job_type','order','heading_text','subheading_text','show_meta','show_job_id','show_excerpt','widget') as $key) {
+            if (isset($_GET[$key]) && is_scalar($_GET[$key])) $raw[$key]=sanitize_text_field(wp_unslash($_GET[$key]));
+        }
+        if(isset($raw['heading']))$raw['heading']=$raw['heading']==='1'?'yes':'no';
+        if(isset($raw['filters']))$raw['filters']=$raw['filters']==='1'?'yes':'no';
+        // Only a native Elementor widget suppresses the shortcode's anchor id.
+        $raw['widget']=isset($raw['widget']) && $raw['widget']==='1';
+        wp_send_json_success(array('html'=>self::render_list($raw)));
     }
     public static function fresh_application_form() {
         // Always deliver fresh nonces and timestamps, even behind page/CDN caching.

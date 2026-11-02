@@ -1,8 +1,10 @@
+> **v0.17.0:** Native drag-and-drop Elementor widget with four layouts and responsive styling. See [the native Elementor widget guide](docs/ELEMENTOR-NATIVE-WIDGET.md).
+
 > **v0.16.0:** Per-job application receipt emails, configurable sender, HR emails with controlled attachments, expanded eligibility screening, and a mandatory GitHub update notification. See [upgrade instructions](docs/UPGRADE-TO-0.16.0.md).
 
 # Achuthan Jobs
 
-**Achuthan • WordPress plugin • v0.16.0 (staging)**
+**Achuthan • WordPress plugin • v0.17.0 (staging)**
 
 > The repository is publicly visible, but a proprietary notice does not grant blanket redistribution rights. Earlier GPL-licensed releases may carry continuing rights and obligations. This is a staging build, not a production security certification. Test on WordPress staging before accepting real applicant personal data.
 
@@ -53,7 +55,7 @@ achuthan-jobs-repository/
 
 - Main private admin screen: **Achuthan Jobs → HR Dashboard**.
 - Native job post type: `bbs_job`.
-- Public listings: `[achuthan_jobs_list]` inside any Elementor Shortcode widget. `[achuthan_jobs]` provides the complete ready-made layout.
+- Public listings: drag **Achuthan Jobs — Job Listings** into any Elementor section/container; choose Cards grid, List, Compact or Editorial with responsive style controls. The old `[achuthan_jobs_list]` shortcode still works, and `[achuthan_jobs]` provides a full ready-made page.
 - Individual jobs: `/careers/{job-slug}/`.
 - Legacy `/careers/job/{job-slug}/` should redirect after rewrite rules refresh.
 - Elementor controls the `/careers/` page; add `[achuthan_jobs_list]` to render live vacancies.
@@ -112,3 +114,11 @@ Once this release is installed manually, future **published, tagged GitHub Relea
 - Eligibility question rules support option selections (any/all), numeric minimum/maximum, date ranges, and objective text phrases. Applications are **flagged for human review**, never automatically rejected. Filter Applications by eligibility outcome.
 - A **persistent administrator update warning** appears when a verified newer GitHub Release is available. The standard WordPress update mechanism is used; it never forcibly installs unverified code.
 - More details: [v0.16.0 upgrade and staging checks](docs/UPGRADE-TO-0.16.0.md).
+
+## v0.17.0 — Native Elementor Job Listings widget
+
+- Elementor **Free** detects **Achuthan Jobs — Job Listings** under Achuthan Jobs/General widget categories. No Elementor-specific code is needed to publish new vacancies.
+- Four layouts: grid, list, compact, editorial. Column counts per device, amount, sort, department, job type, filters, headings, job metadata, Job IDs and optional excerpts.
+- Native Elementor Style controls for backgrounds, hover state, accent and title colour, gap, padding and radius.
+- Public AJAX refresh preserves widget-specific options. Saving a native widget suppresses the former automatic bottom-of-page list.
+- Import the optional example template under `elementor/achuthan-careers-page.json`. See [setup and testing guide](docs/ELEMENTOR-NATIVE-WIDGET.md).

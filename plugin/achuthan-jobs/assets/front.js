@@ -37,6 +37,8 @@
     try {
       var url = new URL(ajax, window.location.href);
       url.searchParams.set('action', 'aj_live_jobs');
+      url.searchParams.set('heading', list.dataset.ajHeading || '1');
+      url.searchParams.set('filters', list.dataset.ajFilters || '1');
       url.searchParams.set('_aj', String(Date.now()));
       var response = await fetch(url.toString(), {cache: 'no-store', credentials: 'same-origin'});
       if (!response.ok) throw new Error('Jobs refresh failed');
@@ -238,11 +240,26 @@
     refreshFormTokens(box,section);
   }
 
-  document.querySelectorAll('.bbs-careers').forEach(function (section) {
-    var list = section.querySelector('.bbs-list[data-bbs-live]');
-    if (list) { bindFilters(list); refreshJobs(section); }
-    bindForm(section);
-  });
+  function boot(context) {
+    (context || document).querySelectorAll('.bbs-careers').forEach(function (section) {
+      var list = section.querySelector('.bbs-list[data-bbs-live]');
+      if (list) { bindFilters(list); refreshJobs(section); }
+      bindForm(section);
+    });
+  }
+  boot(document);
+  // Elementor's editor replaces shortcode HTML without reloading the page.
+  // Rebind to new widgets after Elementor renders them, but guard duplicate handlers.
+  function installElementorHook() {
+    if (!window.elementorFrontend?.hooks || window.achuthanJobsElementorHooked) return;
+    window.achuthanJobsElementorHooked = true;
+    window.elementorFrontend.hooks.addAction('frontend/element_ready/shortcode.default', function (scope) {
+      var node = scope?.[0] || scope;
+      if (node?.querySelectorAll) boot(node);
+    });
+  }
+  installElementorHook();
+  window.addEventListener('elementor/frontend/init', installElementorHook);
 
   // Update job listings while the tab is open, without refreshing WordPress/Elementor.
   window.setInterval(function () {

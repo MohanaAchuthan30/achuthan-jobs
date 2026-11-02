@@ -35,13 +35,7 @@ final class Achuthan_Questions {
     }
     public static function job_template($template) {
         $base=plugin_dir_path(dirname(__FILE__)).'templates/';
-        // A native WP page with slug careers exists on this site. Render the
-        // live plugin listing instead of stale Elementor/static page content.
-        // Site owners can opt out in Achuthan Jobs > Settings.
-        if (is_page('careers') && get_option('aj_own_careers_page','1')==='1') {
-            $custom=$base.'archive-careers.php';
-            if (is_readable($custom)) return $custom;
-        }
+        // /careers/ stays a normal editable WordPress/Elementor Page.
         if (is_singular('bbs_job')) {
             $custom=$base.'single-bbs_job.php';
             if (is_readable($custom)) return $custom;
@@ -82,26 +76,45 @@ final class Achuthan_Questions {
             }
             $allow=sanitize_key((string)($r['allow']??'pdf'));
             if(!in_array($allow,array('pdf','images','both'),true))$allow='pdf';
-            // Only objective, structured responses are eligible for rule-based flags.
-            $can_screen=in_array($type,array('select','radio','checkbox','number'),true);
+            // Eligibility criteria are explicit HR-authored rules, never inferred by AI.
+            $can_screen=in_array($type,array('select','radio','checkbox','number','date','text','textarea'),true);
             $screen=$can_screen && !empty($r['screen']);
-            $accepted=array();
-            if ($screen && $type!=='number') {
-                $raw=is_scalar($r['accepted']??null)?(string)wp_unslash($r['accepted']):'';
-                foreach(preg_split('/\r?\n/',$raw) as $candidate) {
+            $accepted=[];
+            if($screen && in_array($type,array('select','radio','checkbox'),true)) {
+                $raw_accepted=is_scalar($r['accepted']??null)?(string)wp_unslash($r['accepted']):'';
+                foreach(preg_split('/\r?\n/',$raw_accepted) as $candidate) {
                     $candidate=sanitize_text_field(trim($candidate));
                     if(in_array($candidate,$opts,true)&&!in_array($candidate,$accepted,true))$accepted[]=$candidate;
                 }
-                if (!$accepted) $screen=false; // no accidental automatic rule
+                if(!$accepted)$screen=false;
             }
-            $minimum=0;
-            if ($screen && $type==='number') {
-                $v=is_scalar($r['minimum']??null)?(string)wp_unslash($r['minimum']):'';
-                if(!is_numeric($v)||!is_finite((float)$v)||abs((float)$v)>1000000){$screen=false;}
-                else $minimum=(float)$v;
+            $minimum=null;$maximum=null;
+            if($screen && $type==='number') {
+                foreach(array('minimum','maximum') as $bound){
+                    $v=is_scalar($r[$bound]??null)?(string)wp_unslash($r[$bound]):'';
+                    if($v!==''&&is_numeric($v)&&is_finite((float)$v)&&abs((float)$v)<=1000000)${$bound}=(float)$v;
+                }
+                if($minimum===null && $maximum===null || ($minimum!==null && $maximum!==null && $minimum>$maximum))$screen=false;
             }
+            $keyword='';
+            if($screen && in_array($type,array('text','textarea'),true)){
+                $keyword=is_scalar($r['keyword']??null)?trim(sanitize_text_field(wp_unslash($r['keyword']))):'';
+                $keyword=function_exists('mb_substr')?mb_substr($keyword,0,100):substr($keyword,0,100);
+                if($keyword==='')$screen=false;
+            }
+            $date_from='';$date_to='';
+            if($screen && $type==='date'){
+                foreach(array('date_from','date_to') as $field){
+                    $v=is_scalar($r[$field]??null)?sanitize_text_field(wp_unslash($r[$field])):'';
+                    $dt=DateTimeImmutable::createFromFormat('!Y-m-d',$v);
+                    if($dt&&$dt->format('Y-m-d')===$v)${$field}=$v;
+                }
+                if(($date_from===''&&$date_to==='')||($date_from!==''&&$date_to!==''&&$date_from>$date_to))$screen=false;
+            }
+            $match_mode=isset($r['match_mode']) && $r['match_mode']==='all' ? 'all' : 'any';
             $out[]=array('id'=>$id,'label'=>$label,'type'=>$type,'required'=>!empty($r['required']),
-                'options'=>$opts,'allow'=>$allow,'screen'=>$screen,'accepted'=>$accepted,'minimum'=>$minimum);
+                'options'=>$opts,'allow'=>$allow,'screen'=>$screen,'accepted'=>$accepted,
+                'minimum'=>$minimum,'maximum'=>$maximum,'keyword'=>$keyword,'date_from'=>$date_from,'date_to'=>$date_to,'match_mode'=>$match_mode);
         }
         return $out;
     }
@@ -129,10 +142,13 @@ final class Achuthan_Questions {
         echo '<div class="aj-file-section"'.($type!=='file'?' hidden':'').'><label>Accepted files <select name="'.esc_attr($base).'[allow]">';
         foreach(array('pdf'=>'PDF documents','images'=>'JPG/PNG images','both'=>'PDF and JPG/PNG') as $k=>$v)echo '<option value="'.esc_attr($k).'" '.selected($q['allow']??'pdf',$k,false).'>'.esc_html($v).'</option>';
         echo '</select></label></div>';
-        $screenable=in_array($type,array('radio','select','checkbox','number'),true);
+        $screenable=in_array($type,array('radio','select','checkbox','number','date','text','textarea'),true);
         echo '<div class="aj-eligibility-question"'.(!$screenable?' hidden':'').'><label><input type="checkbox" class="aj-screen-toggle" name="'.esc_attr($base).'[screen]" value="1" '.checked(!empty($q['screen']),true,false).'> Use as a qualifying requirement (HR guidance only)</label>';
-        echo '<div class="aj-screen-choice"'.($type==='number'?' hidden':'').'><p class="description">Qualifying choice(s), one exact option per line; must match the choices above. For multiple-choice, at least one must be selected.</p><textarea rows="2" name="'.esc_attr($base).'[accepted]" placeholder="Enter acceptable answers one per line" style="width:100%">'.esc_textarea(implode("\n",(array)($q['accepted']??array()))).'</textarea></div>';
-        echo '<div class="aj-screen-number"'.($type!=='number'?' hidden':'').'><label>Minimum acceptable numeric answer <input type="number" step="any" name="'.esc_attr($base).'[minimum]" value="'.esc_attr($q['minimum']??'0').'"></label></div></div>';
+        echo '<div class="aj-screen-choice"'.(!in_array($type,array('radio','select','checkbox'),true)?' hidden':'').'><p class="description">Accepted answers, one exact option per line, matching the choices above.</p><textarea rows="2" name="'.esc_attr($base).'[accepted]" placeholder="One acceptable option per line" style="width:100%">'.esc_textarea(implode("\n",(array)($q['accepted']??array()))).'</textarea>';
+        echo '<label>For multiple-choice: <select name="'.esc_attr($base).'[match_mode]"><option value="any" '.selected($q['match_mode']??'any','any',false).'>Any accepted option</option><option value="all" '.selected($q['match_mode']??'any','all',false).'>All accepted options</option></select></label></div>';
+        echo '<div class="aj-screen-number"'.($type!=='number'?' hidden':'').'><label>Minimum answer (optional) <input type="number" step="any" name="'.esc_attr($base).'[minimum]" value="'.esc_attr($q['minimum']??'').'"></label> <label>Maximum answer (optional) <input type="number" step="any" name="'.esc_attr($base).'[maximum]" value="'.esc_attr($q['maximum']??'').'"></label></div>';
+        echo '<div class="aj-screen-text"'.(!in_array($type,array('text','textarea'),true)?' hidden':'').'><label>Answer must contain this exact phrase (case-insensitive) <input type="text" maxlength="100" name="'.esc_attr($base).'[keyword]" value="'.esc_attr($q['keyword']??'').'"></label><p class="description">Only use objective skills/certifications. HR reviews every flag.</p></div>';
+        echo '<div class="aj-screen-date"'.($type!=='date'?' hidden':'').'><label>Earliest acceptable date <input type="date" name="'.esc_attr($base).'[date_from]" value="'.esc_attr($q['date_from']??'').'"></label> <label>Latest acceptable date <input type="date" name="'.esc_attr($base).'[date_to]" value="'.esc_attr($q['date_to']??'').'"></label></div></div>';
         echo '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px"><label><input type="checkbox" value="1" name="'.esc_attr($base).'[required]" '.checked(!empty($q['required']),true,false).'> Required answer</label><button type="button" class="button button-link-delete aj-remove-question">Remove question</button></div></div>';
     }
     public static function save($post_id) {

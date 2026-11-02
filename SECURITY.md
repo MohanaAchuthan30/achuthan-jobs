@@ -1,4 +1,4 @@
-# Security policy — private project
+# Security policy — Achuthan Jobs
 
 **Do not open a public GitHub issue containing an exploit, applicant data,
 credentials, database dumps, or resume files.** Report security problems
@@ -26,8 +26,9 @@ contact using a private channel.
 
 ## Security release policy
 
-No automatic deploys are configured. Human review, backups and staging
-acceptance tests are required before any production update. GitHub Actions
-only runs source checks and produces a downloadable, internal build artifact.
+The repository uses GitHub Actions to publish a tagged, numbered release ZIP.
+**Sites with Achuthan Jobs auto-update enabled may install a newer release automatically.**
+Require code review, backups, and staging acceptance tests **before creating a production release tag**.
+Release checksum verification checks transfer integrity, but it is not an independent cryptographic signing scheme and does not mitigate a compromised release publisher.
 
 **This is not a penetration-test certification.** See docs/TESTING.md.

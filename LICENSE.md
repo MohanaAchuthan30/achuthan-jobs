@@ -3,11 +3,10 @@
 Copyright © 2026 Big Box Studio. All rights reserved, to the extent the
 relevant rights are owned by Big Box Studio.
 
-**Private / internal use.** This repository is intended for authorized
-Big Box Studio personnel and approved contractors. No general permission
-to copy, publish, redistribute, sublicense, or make this repository public
-is granted by this notice. External access or distribution requires prior
-written authorization from the rights holder.
+**Restricted-use notice.** The repository may be publicly visible, but public
+access by itself does not grant permission to reuse or sublicense code under
+this notice. All permissions are subject to the rights actually held by the
+licensor, applicable law, third-party licenses, and any earlier licenses.
 
 This notice governs only code that Big Box Studio is entitled to license.
 It does **not** override third-party licenses, applicable law, or rights
@@ -17,8 +16,8 @@ subsequent copies cannot retroactively withdraw an existing GPL grant.
 A qualified lawyer should assess any WordPress/GPL derivative-work
 obligations before external distribution or commercial sublicensing.
 
-The repository being private is an **access-control setting**, not a
-substitute for an appropriate legal license.
+Repository **visibility and licensing are separate**. Publication does not
+itself change prior grants or the rights applicable to WordPress derivatives.
 
 **Branding note (v0.12.0):** The software product is now displayed as
 **Achuthan Jobs** with author label **Achuthan**. Changing an interface

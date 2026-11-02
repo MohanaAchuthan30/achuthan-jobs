@@ -11,10 +11,12 @@ final class Achuthan_Eligibility {
         $out = array();
         foreach (Achuthan_Questions::questions($job_id) as $q) {
             if (empty($q['screen'])) continue;
-            if (!in_array($q['type'],array('select','radio','checkbox','number'),true)) continue;
+            if (!in_array($q['type'],array('select','radio','checkbox','number','date','text','textarea'),true)) continue;
             $out[] = array('id'=>$q['id'],'label'=>$q['label'],'type'=>$q['type'],
                 'accepted'=>isset($q['accepted']) && is_array($q['accepted'])?$q['accepted']:array(),
-                'minimum'=>isset($q['minimum']) ? (float)$q['minimum'] : 0.0);
+                'minimum'=>$q['minimum']??null,'maximum'=>$q['maximum']??null,
+                'keyword'=>$q['keyword']??'','date_from'=>$q['date_from']??'','date_to'=>$q['date_to']??'',
+                'match_mode'=>$q['match_mode']??'any');
         }
         return $out;
     }
@@ -37,19 +39,38 @@ final class Achuthan_Eligibility {
         foreach ((array)$rules as $rule) {
             if (!is_array($rule) || !isset($rule['id'],$rule['label'],$rule['type'])) continue;
             $kind = $rule['type']; $label = (string)$rule['label'];
-            if (!in_array($kind,array('select','radio','checkbox','number'),true)) continue;
+            if (!in_array($kind,array('select','radio','checkbox','number','date','text','textarea'),true)) continue;
             $allowed = array_values(array_filter((array)($rule['accepted']??array()),'is_scalar'));
-            if ($kind !== 'number' && !$allowed) continue; // never assess a misconfigured rule
+            if (in_array($kind,array('select','radio','checkbox'),true) && !$allowed) continue; // skip misconfigured rule
             ++$checks;
             $value = $submitted[(string)$rule['id']] ?? null;
             if ($value === null || $value === '' || $value === array()) {
                 $unknown[] = $label.': answer not provided';
             } elseif ($kind === 'number') {
                 if (!is_scalar($value) || !is_numeric($value)) $unknown[] = $label.': answer is not numeric';
-                elseif ((float)$value < (float)($rule['minimum']??0)) $reasons[] = $label.': below minimum of '.(float)($rule['minimum']??0);
+                else {
+                    $min=$rule['minimum']??null;$max=$rule['maximum']??null;
+                    if ($min!==null && (float)$value < (float)$min) $reasons[] = $label.': below minimum of '.(float)$min;
+                    if ($max!==null && (float)$value > (float)$max) $reasons[] = $label.': above maximum of '.(float)$max;
+                }
             } elseif ($kind === 'checkbox') {
                 $selected = is_array($value)?$value:array();
-                if (!array_intersect($allowed,$selected)) $reasons[] = $label.': no qualifying option selected';
+                $matches=array_intersect($allowed,$selected);
+                if(($rule['match_mode']??'any')==='all' ? count($matches)!==count($allowed) : !$matches)
+                    $reasons[] = $label.': selected options do not meet the stated requirement';
+            } elseif ($kind === 'text' || $kind === 'textarea') {
+                $keyword=(string)($rule['keyword']??'');
+                if(!is_scalar($value)||$keyword==='')$unknown[]=$label.': answer needs manual review';
+                elseif(stripos((string)$value,$keyword)===false)$reasons[]=$label.': required phrase not found';
+            } elseif ($kind === 'date') {
+                $date=is_scalar($value)?(string)$value:'';
+                $d=DateTimeImmutable::createFromFormat('!Y-m-d',$date);
+                if(!$d||$d->format('Y-m-d')!==$date)$unknown[]=$label.': date needs manual review';
+                else {
+                    $from=$rule['date_from']??'';$to=$rule['date_to']??'';
+                    if($from!=='' && $date<$from)$reasons[]=$label.': date earlier than '.$from;
+                    if($to!=='' && $date>$to)$reasons[]=$label.': date later than '.$to;
+                }
             } else {
                 if (!is_scalar($value)) $unknown[] = $label.': answer format needs review';
                 elseif (!in_array((string)$value,$allowed,true)) $reasons[] = $label.': selected answer does not meet configured requirement';

@@ -1,0 +1,359 @@
+{
+  "version": "0.4",
+  "title": "Achuthan Careers \u2014 Editable Elementor Page",
+  "type": "page",
+  "page_settings": {
+    "template": "default"
+  },
+  "content": [
+    {
+      "id": "00000005",
+      "elType": "section",
+      "settings": {
+        "layout": "boxed",
+        "content_width": {
+          "unit": "px",
+          "size": 1140,
+          "sizes": []
+        },
+        "gap": "no",
+        "background_background": "classic",
+        "background_color": "#FAFBF8",
+        "padding": {
+          "unit": "px",
+          "top": "110",
+          "right": "30",
+          "bottom": "100",
+          "left": "30",
+          "isLinked": false
+        },
+        "padding_mobile": {
+          "unit": "px",
+          "top": "45",
+          "right": "18",
+          "bottom": "45",
+          "left": "18",
+          "isLinked": false
+        }
+      },
+      "elements": [
+        {
+          "id": "00000006",
+          "elType": "column",
+          "settings": {
+            "_column_size": 100,
+            "_inline_size": null
+          },
+          "elements": [
+            {
+              "id": "00000001",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "CAREERS / OPPORTUNITIES",
+                "header_size": "div",
+                "title_color": "#778074",
+                "typography_typography": "custom",
+                "typography_font_family": "Poppins",
+                "typography_font_size": {
+                  "unit": "px",
+                  "size": 12,
+                  "sizes": []
+                }
+              },
+              "elements": []
+            },
+            {
+              "id": "00000002",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "Work on ideas worth building.",
+                "header_size": "h1",
+                "title_color": "#141812",
+                "typography_typography": "custom",
+                "typography_font_family": "Poppins",
+                "typography_font_weight": "600",
+                "typography_font_size": {
+                  "unit": "px",
+                  "size": 56,
+                  "sizes": []
+                },
+                "typography_font_size_mobile": {
+                  "unit": "px",
+                  "size": 35,
+                  "sizes": []
+                },
+                "typography_line_height": {
+                  "unit": "em",
+                  "size": 1.13,
+                  "sizes": []
+                }
+              },
+              "elements": []
+            },
+            {
+              "id": "00000003",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "editor": "<p>Discover open opportunities, collaborate with ambitious teams, and build work that matters.</p>",
+                "text_color": "#586056",
+                "typography_typography": "custom",
+                "typography_font_family": "Poppins",
+                "typography_font_size": {
+                  "unit": "px",
+                  "size": 16,
+                  "sizes": []
+                }
+              },
+              "elements": []
+            },
+            {
+              "id": "00000004",
+              "elType": "widget",
+              "widgetType": "button",
+              "settings": {
+                "text": "Explore open positions",
+                "link": {
+                  "url": "#achuthan-openings",
+                  "is_external": "",
+                  "nofollow": ""
+                },
+                "button_text_color": "#171A13",
+                "background_color": "#E3FF04",
+                "size": "md",
+                "border_radius": {
+                  "unit": "px",
+                  "top": "3",
+                  "right": "3",
+                  "bottom": "3",
+                  "left": "3",
+                  "isLinked": true
+                }
+              },
+              "elements": []
+            }
+          ]
+        }
+      ],
+      "isInner": false
+    },
+    {
+      "id": "0000000c",
+      "elType": "section",
+      "settings": {
+        "layout": "boxed",
+        "content_width": {
+          "unit": "px",
+          "size": 1140,
+          "sizes": []
+        },
+        "gap": "no",
+        "background_background": "classic",
+        "background_color": "#FFFFFF",
+        "padding": {
+          "unit": "px",
+          "top": "82",
+          "right": "30",
+          "bottom": "88",
+          "left": "30",
+          "isLinked": false
+        },
+        "padding_mobile": {
+          "unit": "px",
+          "top": "45",
+          "right": "18",
+          "bottom": "45",
+          "left": "18",
+          "isLinked": false
+        }
+      },
+      "elements": [
+        {
+          "id": "0000000d",
+          "elType": "column",
+          "settings": {
+            "_column_size": 100,
+            "_inline_size": null
+          },
+          "elements": [
+            {
+              "id": "00000007",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "OPEN POSITIONS",
+                "header_size": "div",
+                "title_color": "#7A8076",
+                "typography_typography": "custom",
+                "typography_font_family": "Poppins",
+                "typography_font_size": {
+                  "unit": "px",
+                  "size": 12,
+                  "sizes": []
+                }
+              },
+              "elements": []
+            },
+            {
+              "id": "00000008",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "Join the team.",
+                "header_size": "h2",
+                "title_color": "#141812",
+                "typography_typography": "custom",
+                "typography_font_family": "Poppins",
+                "typography_font_weight": "600",
+                "typography_font_size": {
+                  "unit": "px",
+                  "size": 38,
+                  "sizes": []
+                },
+                "typography_font_size_mobile": {
+                  "unit": "px",
+                  "size": 27,
+                  "sizes": []
+                },
+                "typography_line_height": {
+                  "unit": "em",
+                  "size": 1.13,
+                  "sizes": []
+                }
+              },
+              "elements": []
+            },
+            {
+              "id": "00000009",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "editor": "<p>These positions update automatically when the hiring team publishes, edits, or closes a job.</p>",
+                "text_color": "#586056",
+                "typography_typography": "custom",
+                "typography_font_family": "Poppins",
+                "typography_font_size": {
+                  "unit": "px",
+                  "size": 16,
+                  "sizes": []
+                }
+              },
+              "elements": []
+            },
+            {
+              "id": "0000000a",
+              "elType": "widget",
+              "widgetType": "menu-anchor",
+              "settings": {
+                "anchor": "achuthan-openings"
+              },
+              "elements": []
+            },
+            {
+              "id": "0000000b",
+              "elType": "widget",
+              "widgetType": "shortcode",
+              "settings": {
+                "shortcode": "[achuthan_jobs_list heading=\"no\" filters=\"yes\"]"
+              },
+              "elements": []
+            }
+          ]
+        }
+      ],
+      "isInner": false
+    },
+    {
+      "id": "00000010",
+      "elType": "section",
+      "settings": {
+        "layout": "boxed",
+        "content_width": {
+          "unit": "px",
+          "size": 1140,
+          "sizes": []
+        },
+        "gap": "no",
+        "background_background": "classic",
+        "background_color": "#FAFBF8",
+        "padding": {
+          "unit": "px",
+          "top": "70",
+          "right": "30",
+          "bottom": "70",
+          "left": "30",
+          "isLinked": false
+        },
+        "padding_mobile": {
+          "unit": "px",
+          "top": "45",
+          "right": "18",
+          "bottom": "45",
+          "left": "18",
+          "isLinked": false
+        }
+      },
+      "elements": [
+        {
+          "id": "00000011",
+          "elType": "column",
+          "settings": {
+            "_column_size": 100,
+            "_inline_size": null
+          },
+          "elements": [
+            {
+              "id": "0000000e",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "Can\u2019t find your next role?",
+                "header_size": "h2",
+                "title_color": "#141812",
+                "typography_typography": "custom",
+                "typography_font_family": "Poppins",
+                "typography_font_weight": "600",
+                "typography_font_size": {
+                  "unit": "px",
+                  "size": 38,
+                  "sizes": []
+                },
+                "typography_font_size_mobile": {
+                  "unit": "px",
+                  "size": 27,
+                  "sizes": []
+                },
+                "typography_line_height": {
+                  "unit": "em",
+                  "size": 1.13,
+                  "sizes": []
+                }
+              },
+              "elements": []
+            },
+            {
+              "id": "0000000f",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "editor": "<p>Check back as new opportunities are posted. This section can be edited or replaced entirely in Elementor.</p>",
+                "text_color": "#586056",
+                "typography_typography": "custom",
+                "typography_font_family": "Poppins",
+                "typography_font_size": {
+                  "unit": "px",
+                  "size": 16,
+                  "sizes": []
+                }
+              },
+              "elements": []
+            }
+          ]
+        }
+      ],
+      "isInner": false
+    }
+  ]
+}

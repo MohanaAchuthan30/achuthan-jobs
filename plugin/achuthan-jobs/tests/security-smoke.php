@@ -22,11 +22,16 @@ function add_rewrite_rule($regex,$query,$after='bottom'){ $GLOBALS['testRewriteR
 function register_post_type($type,$args){ $GLOBALS['testRegisteredType']=[$type,$args]; }
 function is_page($slug){ return $slug==='careers'; }
 function is_singular($type=''){ return false; }
+function in_the_loop(){return true;}
+function is_main_query(){return true;}
+function get_queried_object_id(){return 71;}
+function get_post_field($field,$id){return $GLOBALS['mockCareerContent']??'';}
 function plugin_dir_path($file){return dirname($file).'/';}
 
 function sanitize_html_class($s){return preg_replace('/[^a-zA-Z0-9_-]/','',(string)$s);}
 function add_action($name,$cb,...$rest){global $hooks;$hooks[$name][]=$cb;}
 function add_filter($name,$cb,...$rest){add_action($name,$cb);}
+function shortcode_atts($defaults,$attrs,$tag=''){return array_merge($defaults,$attrs);}
 function add_shortcode($name,$cb){global $hooks;$hooks['shortcode_'.$name][]=$cb;}
 function register_activation_hook($file,$cb){} function register_deactivation_hook($file,$cb){}
 function wp_salt($scheme){global $salt;return $salt.'|'.$scheme;}
@@ -42,7 +47,7 @@ function admin_url($url=''){return 'http://localhost/wp-admin/'.$url;}
 function add_query_arg($key,$value,$url){return $url.(strpos($url,'?')===false?'?':'&').$key.'='.$value;}
 function get_post_type($id){return $id===123?'bbs_job':'post';}
 function get_post_status($id){return 'publish';}
-function get_post_meta($id,$key){global $questionMeta;return $key==='_aj_questions'?($questionMeta[$id]??''):'';}
+function get_post_meta($id,$key){global $questionMeta;return $key==='_aj_questions'?($questionMeta[$id]??''):($key==='_elementor_data'?($GLOBALS['mockElementorData']??''):($GLOBALS['mockMeta'][$id][$key]??''));}
 function get_posts($args){return $GLOBALS['testJobs']??[];}
 function get_privacy_policy_url(){return 'https://example.com/privacy';}
 function wp_http_validate_url($url){return filter_var($url,FILTER_VALIDATE_URL)!==false;}
@@ -68,8 +73,9 @@ function set_transient($key,$val,$seconds){global $transients;$transients[$key]=
 function wp_update_post($arr,$err=false){global $postUpdates;$postUpdates[]=$arr;return $arr['ID'];}
 function wp_trash_post($id){global $postUpdates;$postUpdates[]=['ID'=>$id,'post_status'=>'trash'];return $id;}
 function update_post_meta($id,$key,$val){global $metaUpdates;$metaUpdates[]=[$id,$key,$val];return true;}
-function wp_mail($to,$subject,$body){global $outbox;$outbox[]=[$to,$subject,$body];return true;}
+function wp_mail($to,$subject,$body,$headers=[],$attachments=[]){global $outbox;$outbox[]=[$to,$subject,$body,$headers,$attachments];return true;}
 function is_email($v){return (bool)filter_var($v,FILTER_VALIDATE_EMAIL);}
+function sanitize_email($v){return filter_var($v,FILTER_SANITIZE_EMAIL);}
 function current_time($format,$gmt=false){return '2026-10-30 12:00:00';}
 function sanitize_key($v){return preg_replace('/[^a-z0-9_\-]/','',strtolower($v));}
 function get_the_ID(){return 123;}
@@ -77,7 +83,7 @@ require dirname(__DIR__).'/achuthan-jobs.php';
 $pass=0;
 function check($condition,$message){global $pass; if(!$condition){fwrite(STDERR,"FAIL: $message\n");exit(1);} $pass++; echo "PASS: $message\n";}
 function private_call($method,...$args){$r=new ReflectionMethod(Achuthan_Jobs::class,$method);return $r->invoke(null,...$args);}
-check(Achuthan_Jobs::VERSION==='0.13.0','Version registered');
+check(Achuthan_Jobs::VERSION==='0.16.0','Version registered');
 check(isset($GLOBALS['hooks']['shortcode_achuthan_jobs']),'Shortcode registered');
 check(isset($GLOBALS['hooks']['wp_ajax_nopriv_aj_live_jobs']),'Public jobs refresh endpoint registered');
 check(isset($GLOBALS['hooks']['wp_ajax_nopriv_aj_extra_questions']),'Public additional job questions endpoint registered');
@@ -289,9 +295,25 @@ echo "UI-render checks passed: ".$pass." assertions\n";
 Achuthan_Jobs::register();
 check(($GLOBALS['testRegisteredType'][1]['rewrite']['slug']??null)==='careers','Job permalinks use /careers/{slug}/');
 check(str_contains($GLOBALS['testRewriteRules'][0][0]??'', 'careers/job/'),'Legacy /careers/job/{slug}/ rewrite remains registered');
-check(is_readable(dirname(__DIR__).'/templates/archive-careers.php'),'Live plugin-owned /careers/ page template bundled');
+check(is_readable(dirname(__DIR__).'/templates/archive-careers.php'),'Legacy fallback archive remains bundled but is not forced');
 $careerTpl=Achuthan_Questions::job_template('theme-old-template.php');
-check(str_ends_with($careerTpl,'templates/archive-careers.php'),'Careers page uses dynamic plugin template by default');
+check($careerTpl==='theme-old-template.php','Careers page preserves native WordPress/Elementor template');
+
+// Elementor layout content should remain editable while the separate list shortcode
+// supplies dynamic WordPress job cards and retains display parameters on AJAX refresh.
+$elementorList=Achuthan_Jobs::list_shortcode(array('heading'=>'no','filters'=>'yes'));
+check(str_contains($elementorList,'bbs-elementor-list'),'Elementor-friendly live list shortcode renders');
+check(str_contains($elementorList,'data-aj-heading="0"'),'Optional Elementor heading is not duplicated by the plugin');
+check(str_contains($elementorList,'data-aj-filters="1"'),'Live listing filters remain enabled when configured');
+check(!str_contains($elementorList,'bbs-hero-art'),'Elementor list shortcode does not force plugin hero design');
+check(str_contains((string)file_get_contents(dirname(__DIR__).'/assets/front.js'),"searchParams.set('heading'"),'AJAX refresh preserves Elementor list options');
+check(!str_contains((string)file_get_contents(dirname(__DIR__).'/includes/class-achuthan-questions.php'), "if (is_page('careers')"),'Careers template is not overridden');
+$GLOBALS['mockCareerContent']=''; $GLOBALS['mockElementorData']='';
+check(str_contains(Achuthan_Jobs::careers_content_fallback('<p>Editable heading</p>'),'bbs-elementor-list'),'Existing Elementor content gets a live list until shortcode is placed');
+$GLOBALS['mockElementorData']='[{"widgetType":"shortcode","settings":{"shortcode":"[achuthan_jobs_list heading=\\\"no\\\"]"}}]';
+check(Achuthan_Jobs::careers_content_fallback('<p>Editable heading</p>')==='<p>Editable heading</p>','Elementor widget suppresses temporary fallback list');
+$GLOBALS['mockElementorData']='';
+
 $questionMeta[123] = Achuthan_Questions::normalize([
  ['id'=>'q_123abc456','label'=>'Select your tools','type'=>'checkbox','required'=>1,'options'=>"Figma\nPhotoshop\nIllustrator"],
  ['id'=>'q_789abc123','label'=>'Work arrangement','type'=>'radio','required'=>1,'options'=>"Onsite\nHybrid"],
@@ -352,4 +374,38 @@ check($qa[0]['screen']===true && $qa[0]['minimum']===5.0,'Minimum numeric qualif
 $qa=Achuthan_Questions::normalize([['id'=>'q_qualify123','label'=>'Upload portfolio','type'=>'file','screen'=>'1']]);
 check($qa[0]['screen']===false,'Files are never automatically scored');
 
+// v0.16 job acknowledgement templates, explicit sender, and attachment upload limits.
+$GLOBALS['mockMeta'][123]['_aj_ack_subject']='Application received for {job_title} — {company_name}';
+$GLOBALS['mockMeta'][123]['_aj_ack_body']='Hello {candidate_name}. Application {application_id} for {job_id} is received.';
+check(Achuthan_Mailer::render_template('Hello {candidate_name}', ['candidate_name'=>'Test Candidate'])==='Hello Test Candidate','Mail placeholder substitution');
+$before=count($outbox);
+check(Achuthan_Mailer::acknowledge('candidate@example.test','Applicant A',123,77),'Job acknowledgement email queues');
+check(count($outbox)===$before+1 && str_contains($outbox[$before][1],'Graphic Designer'),'Job-specific acknowledgement subject uses job title');
+check(str_contains($outbox[$before][2],'Application 77'),'Application ID substituted in job email');
+check(is_array(Achuthan_Mailer::validate_attachments(null)),'No HR attachments are valid');
+$bad=['name'=>array_fill(0,4,'a.pdf'),'size'=>array_fill(0,4,100),'tmp_name'=>array_fill(0,4,'/tmp/missing'),'error'=>array_fill(0,4,0)];
+check(is_wp_error(Achuthan_Mailer::validate_attachments($bad)),'Attachment count capped at 3');
+$bad=['name'=>['a.pdf'],'size'=>[3145729],'tmp_name'=>['/tmp/missing'],'error'=>[0]];
+check(is_wp_error(Achuthan_Mailer::validate_attachments($bad)),'HR attachment > 3MB blocked');
+check(is_wp_error(Achuthan_Mailer::validate_attachments(['name'=>['a.exe'],'size'=>[100],'tmp_name'=>['/tmp/missing'],'error'=>[0]])),'Files without valid upload state rejected');
+check(Achuthan_Mailer::send_hr_message('candidate@example.test','Test','Hello')===true,'HR email without attachment still works');
+check(isset($GLOBALS['hooks']['save_post_bbs_job']),'Per-job acknowledgement settings registered');
+// Screening now covers numeric ranges, date ranges, objective text phrases, and all-selected answers.
+$qa=Achuthan_Questions::normalize([['id'=>'q_numberlimits','label'=>'Projects','type'=>'number','screen'=>'1','minimum'=>'2','maximum'=>'5']]);
+check($qa[0]['screen'] && $qa[0]['maximum']===5.0,'Numeric answer upper bound saved');
+$r=['id'=>'q_numberlimits','label'=>'Projects','type'=>'number','minimum'=>2,'maximum'=>5];
+check(Achuthan_Eligibility::evaluate_rules(0,[$r],null,[['id'=>'q_numberlimits','value'=>7]])['status']==='not_met','Numeric maximum flags out-of-range answer');
+check(Achuthan_Eligibility::evaluate_rules(0,[$r],null,[['id'=>'q_numberlimits','value'=>3]])['status']==='meets','Numeric in-range answer passes');
+$qa=Achuthan_Questions::normalize([['id'=>'q_textphrase','label'=>'Certification','type'=>'text','screen'=>'1','keyword'=>'AWS']]);
+check($qa[0]['screen'] && $qa[0]['keyword']==='AWS','Objective text phrase saved');
+$r=['id'=>'q_textphrase','label'=>'Certification','type'=>'text','keyword'=>'AWS'];
+check(Achuthan_Eligibility::evaluate_rules(0,[$r],null,[['id'=>'q_textphrase','value'=>'Certified in aws cloud']])['status']==='meets','Text phrase checked case insensitively');
+$qa=Achuthan_Questions::normalize([['id'=>'q_dateavail','label'=>'Availability date','type'=>'date','screen'=>'1','date_from'=>'2026-11-01','date_to'=>'2026-12-15']]);
+check($qa[0]['screen'] && $qa[0]['date_to']==='2026-12-15','Acceptable date range saved');
+$r=['id'=>'q_dateavail','label'=>'Availability date','type'=>'date','date_from'=>'2026-11-01','date_to'=>'2026-12-15'];
+check(Achuthan_Eligibility::evaluate_rules(0,[$r],null,[['id'=>'q_dateavail','value'=>'2026-12-30']])['status']==='not_met','Date after configured upper bound flagged');
+$r=['id'=>'q_checkboxall','label'=>'Technical stack','type'=>'checkbox','accepted'=>['Figma','Illustrator'],'match_mode'=>'all'];
+check(Achuthan_Eligibility::evaluate_rules(0,[$r],null,[['id'=>'q_checkboxall','value'=>['Figma']]])['status']==='not_met','All-choice rule requires all accepted choices');
+check(Achuthan_Eligibility::evaluate_rules(0,[$r],null,[['id'=>'q_checkboxall','value'=>['Figma','Illustrator']]])['status']==='meets','All-choice rule passes matched list');
+check(str_contains(file_get_contents(dirname(__DIR__).'/assets/questions-admin.js'),'aj-screen-date'),'Admin UI switches eligibility rule controls by question type');
 echo "ALL $pass MOCK ASSERTIONS PASSED. REAL WP INTEGRATION REMAINS UNTESTED.\n";

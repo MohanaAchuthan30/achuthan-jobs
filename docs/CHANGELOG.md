@@ -1,49 +1,32 @@
 # Changelog
 
-## 0.13.0 — 2026-10-31
+## 0.16.0 — Email customisation, HR attachments and eligibility improvements
+- Configurable plain-text application acknowledgement subject/body per job, including placeholders for candidate, title, job ID, application ID and employer. Independent messages for multi-job submissions.
+- Per-installation From email and sender display name settings. SMTP configuration still managed by the hosting site.
+- HR email composer supports up to three files (PDF/DOCX/JPG/PNG, 3 MB each) using non-persistent secure temporary copies.
+- Extended per-question eligibility rules: numeric intervals, date intervals, case-insensitive objective text phrases, and any/all multi-select requirements.
+- Added HR applicant-list filter by eligibility flag. No automatic rejection.
+- Persistent, capability-limited GitHub Release update notice linking to WordPress core updater; optional admin release cache refresh handler.
+- Retained CPT ID, database table schema, job slugs, Elementor shortcode and existing data.
+- Local PHP/JS lint and mocked regression tests. Live WordPress, SMTP, real upload and updater tests pending.
 
-- Added structured experience thresholds per job (such as 2 years), qualifying answers to choice questions, and minimum numeric screening questions.
-- Applicants to multiple jobs provide job-specific relevant experience; outcomes are saved separately per application.
-- HR sees human-review eligibility flags and specific reasons in the Applications table, recent activity, and candidate details.
-- Added authenticated, nonce-protected **Re-evaluate** operation with audit logging when job requirements change; existing applications remain **Not yet assessed** until manually checked.
-- No auto rejection, hiring-stage changes, candidate scoring from resume PDFs, or decisions based on personal/demographic data.
-- Public careers copy, employer name, candidate consent, email wording and SEO organisation now use the configured employer name or the current WordPress site title.
-- Made location text and schema country/timezone independent of Bengaluru/India; works with WordPress shortcode on other sites. Internal identifiers remain for compatibility.
-
-
-## 0.12.0 — 2026-10-30
-
-- Rebranded the plugin author and all user-facing plugin text to **Achuthan**.
-- Updated applicant emails, Careers and native job headings, HR Dashboard and recruitment privacy tool labels.
-- Renamed the visible recruiter role label while preserving user role IDs and all database keys.
-- New installations default notification email to the WordPress administrator address; existing settings remain unchanged.
-- Kept existing data, job permalinks, shortcodes, and application workflows.
+## 0.15.0
+- Stop overriding the native `/careers/` page so Elementor content can be edited and rendered; append a temporary live list until an Elementor shortcode widget is placed.
+- Add `[achuthan_jobs_list]` shortcode for live jobs with optional heading/filters.
+- Maintain display options across AJAX refresh and handle Elementor shortcode rerendering.
+- Add editable Elementor starter template and setup instructions.
+- Preserve job post URLs, database, candidate records, and GitHub updater.
 
 
-## 0.11.0 — 2026-10-30
+## 0.14.0 — GitHub public Release auto-update support
 
-- Canonical job routes: `/careers/{slug}/`, with legacy redirect.
-- Frisk/Elementor-resistant checkboxes and radios for custom questions.
-- Default dynamic `/careers/` page ownership with shortcode opt-out.
+- Added WordPress `Update URI` and GitHub Releases update discovery.
+- Added background auto-update integration scoped exclusively to Achuthan Jobs.
+- Pinned package source to official GitHub Release asset `achuthan-jobs.zip`.
+- Added SHA-256 check against GitHub asset digest before installing.
+- Admin setting allows enabling/disabling auto-updates.
+- GitHub Actions workflow builds and publishes a versioned release when a matching tag is pushed.
+- Preserved existing plugin folder, job URLs, application database and HR functions.
 
-## 0.10.0
-
-- Admin preview for private PDFs/images and application deletion controls.
-
-## 0.9.0
-
-- Multi-job application, 3 MiB file cap, friendly Job IDs and bulk ZIP export.
-
-## 0.8.0
-
-- Job-specific custom questions, answer options, file questions and ratings.
-
-## 0.6.0
-
-- Expanded main plugin HR dashboard and candidate tracking.
-
-## Private repository preparation
-
-- GitHub-only private source layout, CI checks and release packaging scripts.
-- Updated plugin header to a proprietary/private notice for this source
-  bundle; **prior GPL grants, if any, remain unaffected** (see LICENSE.md).
+## 0.13.0 — Job eligibility checks
+- Per-job experience screening and configurable qualifying answers.

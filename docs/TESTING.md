@@ -49,3 +49,12 @@ bash scripts/build-plugin.sh
 ## Eligibility tests added in 0.13
 
 Run `bash scripts/verify.sh` and inspect `tests/security-smoke.php`. This tests the pure rule evaluator (threshold, accepted option, multi-option, numeric and missing data), permissions and existing mocking harness. Run actual end-to-end applications on a real WordPress staging server; mocked tests do not prove live DB migrations, admin screens or Mail/Elementor integration.
+
+## v0.15.0 Elementor integration tests
+1. Upgrade v0.14.0 on a staging site with a previously Elementor-edited `/careers/` Page and confirm its saved sections are visible again.
+2. Add a Shortcode widget `[achuthan_jobs_list heading="no" filters="yes"]`; publish a job; verify card appears after refresh.
+3. Edit/close a job in HR Dashboard; verify the live AJAX list updates without editing Elementor.
+4. In Elementor editor, modify native hero, typography, spacing and background; confirm saved changes on the front end.
+5. Check desktop, tablet, iPhone/Android and archived/cached page behavior.
+6. Verify the individual job page, application flow, file validation, HR workflows and updater still work.
+7. Verify that when no shortcode is present, jobs are *not* automatically inserted into Elementor pages; the site editor must place the dynamic list.

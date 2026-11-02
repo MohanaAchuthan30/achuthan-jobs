@@ -1,9 +1,7 @@
-# Achuthan Jobs v0.13.0
+# Achuthan Jobs v0.14.0
 
-Publisher: **Achuthan**. Recruiting employer: configured per site under **Achuthan Jobs → Settings**; defaults to WordPress site title.
+Install the `achuthan-jobs.zip` package on WordPress 6.2+ / PHP 8.0+. All new releases can be checked through the public official GitHub Releases feed via WordPress native plugin update mechanism. Install this version manually once. Release asset must be named `achuthan-jobs.zip`; raw source ZIPs cannot update the plugin. The SHA-256 checksum must match GitHub's published asset digest. See repository docs/GITHUB-AUTO-UPDATES.md.
 
-Features include live job listings, role-specific questions and 3 MB attachments, private candidate records, hiring pipeline, HR email, document previews/downloads, bulk operations, and **eligibility screening guidance** based on job-specific experience/structured-question rules. No automatic rejection.
+## Elementor Careers page (v0.15.0)
 
-See repository `README.md` and `docs/UPGRADE-TO-0.13.0.md` for staging installation, migration, privacy and limitations. Existing v0.12 data identifiers are preserved.
-
-Install to staging and perform actual WordPress/Elementor integration tests before use with real applicants.
+The WordPress page at `/careers/` now remains fully editable in Elementor. Add `[achuthan_jobs_list]` using Elementor Shortcode widget for live jobs. `[achuthan_jobs_list heading="no"]` omits the plugin heading; `[achuthan_jobs]` keeps the complete plugin-designed page. See the repository docs for instructions.

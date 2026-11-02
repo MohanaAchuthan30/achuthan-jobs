@@ -2,11 +2,12 @@
 /**
  * Plugin Name: Achuthan Jobs
  * Description: Multi-site WordPress recruitment dashboard with jobs, applicant management, and transparent HR eligibility checks.
- * Version: 0.13.0
+ * Version: 0.16.0
  * Requires at least: 6.2
  * Requires PHP: 8.0
  * License: Proprietary (internal use only)
  * Author: Achuthan
+ * Update URI: https://github.com/MohanaAchuthan30/achuthan-jobs
  * Text Domain: achuthan-jobs
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
@@ -22,7 +23,7 @@ if ( class_exists( 'BBS_Careers', false ) ) {
 }
 
 final class Achuthan_Jobs {
-    const VERSION = '0.13.0';
+    const VERSION = '0.16.0';
     const MAX_CSV_BYTES = 1048576;
     const MAX_CSV_ROWS = 100;
     // Legacy internal identifiers are intentionally retained for upgrade safety.
@@ -186,12 +187,13 @@ final class Achuthan_Jobs {
             $roles->role_names['bbs_recruiter'] = 'Achuthan Recruiter';
             update_option($roles->role_key, $roles->roles);
         }
-        // By default the existing /careers/ WordPress page is rendered by the
-        // plugin. Elementor content is not used for this single public URL.
-        // Turn this off in Settings to use a shortcode inside Elementor instead.
-        if ( false === get_option('aj_own_careers_page', false) ) add_option('aj_own_careers_page', '1', '', false);
+        // v0.15: the normal WordPress /careers/ Page is always controlled by
+        // its editor (including Elementor). Do not override saved page layouts.
+        // The legacy setting is kept only for backwards-compatible migrations.
+        update_option('aj_own_careers_page', '0');
         if ( false === get_option('bbs_retention_days', false) ) add_option('bbs_retention_days', 180);
         if ( false === get_option('bbs_hr_email', false) ) add_option('bbs_hr_email', get_option('admin_email'));
+        if ( false === get_option('aj_github_auto_update', false) ) add_option('aj_github_auto_update', '1', '', false);
         if ( false === get_option('aj_employer_name', false) ) add_option('aj_employer_name', get_bloginfo('name'));
         if ( false === get_option('aj_employer_country', false) ) add_option('aj_employer_country', '');
         if ( ! wp_next_scheduled('bbs_daily_cleanup') ) wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'bbs_daily_cleanup');
@@ -203,6 +205,7 @@ final class Achuthan_Jobs {
     }
     public static function init() {
         Achuthan_Questions::initialize();
+        Achuthan_Mailer::initialize();
         add_action('init', array(__CLASS__,'register'));
         add_action('admin_init',array(__CLASS__,'maybe_upgrade'));
         add_action('template_redirect',array(__CLASS__,'protect_application_pages'),0);
@@ -210,9 +213,11 @@ final class Achuthan_Jobs {
         add_action('add_meta_boxes', array(__CLASS__,'metabox'));
         add_action('save_post_' . self::CPT, array(__CLASS__,'save_meta'));
         add_filter('the_content', array(__CLASS__,'job_content'), 20);
+        add_filter('the_content', array(__CLASS__,'careers_content_fallback'), 99);
         add_filter('document_title_parts', array(__CLASS__,'document_title'));
         add_shortcode('bbs_careers', array(__CLASS__,'shortcode'));
         add_shortcode('achuthan_jobs', array(__CLASS__,'shortcode'));
+        add_shortcode('achuthan_jobs_list', array(__CLASS__,'list_shortcode'));
         add_action('wp_enqueue_scripts', array(__CLASS__,'frontend_assets'));
         add_action('admin_menu', array(__CLASS__,'menus'));
         add_action('admin_enqueue_scripts', array(__CLASS__,'admin_assets'));
@@ -322,7 +327,12 @@ final class Achuthan_Jobs {
     public static function frontend_assets() {
         // Enqueue only when rendered (including inside Elementor Shortcode widgets).
         // The fallback for job singular pages is handled by job_content().
-        if (is_singular(self::CPT) || is_page('careers') || (is_singular() && has_shortcode((string)get_post_field('post_content',get_queried_object_id()),'achuthan_jobs')) || (is_singular() && has_shortcode((string)get_post_field('post_content',get_queried_object_id()),'bbs_careers'))) self::enqueue_front_assets();
+        $id=get_queried_object_id();
+        $content=(string)get_post_field('post_content',$id);
+        $elementor=get_post_meta($id,'_elementor_data',true);
+        // Elementor stores Shortcode widgets in _elementor_data, not post_content.
+        if (is_singular(self::CPT) || is_page('careers') || self::has_jobs_shortcode($content)
+            || (is_string($elementor) && self::has_jobs_shortcode($elementor))) self::enqueue_front_assets();
     }
     private static function enqueue_front_assets() {
         wp_enqueue_style('achuthan-jobs-poppins','https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap',array(),null);
@@ -342,6 +352,30 @@ final class Achuthan_Jobs {
         return !$existing;
     }
 
+    /** Elementor-ready, live jobs list. Build hero/culture/CTA in native Elementor widgets.
+     * Supported attrs: heading=yes|no, filters=yes|no. JS retains these on refresh. */
+    public static function list_shortcode($atts=array()) {
+        $atts=shortcode_atts(array('heading'=>'yes','filters'=>'yes'), (array)$atts, 'achuthan_jobs_list');
+        $heading=in_array(strtolower((string)$atts['heading']),array('yes','true','1'),true);
+        $filters=in_array(strtolower((string)$atts['filters']),array('yes','true','1'),true);
+        self::enqueue_front_assets();
+        return '<section class="bbs-careers bbs-elementor-list" data-bbs-ajax="'.esc_url(admin_url('admin-ajax.php')).'" aria-label="'.esc_attr(self::employer_name()).' job openings">'.self::render_list($heading,$filters).'</section>';
+    }
+    /** Migration safety: keep live jobs visible after removing the old template
+     * override. Once an editor places the shortcode, nothing is injected. */
+    public static function careers_content_fallback($content) {
+        if (!is_page('careers') || !in_the_loop() || !is_main_query()) return $content;
+        $id=get_queried_object_id();
+        $raw=(string)get_post_field('post_content',$id);
+        $data=get_post_meta($id,'_elementor_data',true);
+        $editor_json=is_string($data)?$data:'';
+        if (self::has_jobs_shortcode($raw) || self::has_jobs_shortcode($editor_json)) return $content;
+        return $content . self::list_shortcode(array('heading'=>'yes','filters'=>'yes'));
+    }
+    private static function has_jobs_shortcode($content) {
+        return preg_match('/\[(?:achuthan_jobs_list|achuthan_jobs|bbs_careers)(?:\s|\])/i',(string)$content)===1;
+    }
+
     public static function shortcode() {
         self::enqueue_front_assets();
         ob_start();
@@ -353,10 +387,12 @@ final class Achuthan_Jobs {
         return ob_get_clean();
     }
     /** Server-side output for SEO plus an uncached AJAX refresh for the live Careers page. */
-    private static function render_list() {
+    private static function render_list($heading=true,$filters=true) {
         $jobs=get_posts(array('post_type'=>self::CPT,'post_status'=>'publish','numberposts'=>-1,'orderby'=>'date','order'=>'DESC','suppress_filters'=>false));
         ob_start();
-        echo '<div id="bbs-openings" class="bbs-list" data-bbs-live="1"><div class="bbs-heading"><div><span class="bbs-overline">JOIN OUR TEAM</span><h2>Open positions<span class="bbs-count"></span></h2></div><p>Jobs shown here update automatically when our team publishes or closes a vacancy.</p></div>';
+        echo '<div id="bbs-openings" class="bbs-list" data-bbs-live="1" data-aj-heading="'.($heading?'1':'0').'" data-aj-filters="'.($filters?'1':'0').'">';
+        if ($heading) echo '<div class="bbs-heading"><div><span class="bbs-overline">JOIN OUR TEAM</span><h2>Open positions<span class="bbs-count"></span></h2></div><p>Jobs shown here update automatically when our team publishes or closes a vacancy.</p></div>';
+        if ($filters) {
         echo '<div class="bbs-filters"><label class="bbs-search"><span class="screen-reader-text">Search jobs</span><input type="search" data-bbs-filter="query" placeholder="Search roles or skills"></label><label><span class="screen-reader-text">Department</span><select data-bbs-filter="department"><option value="">All departments</option>';
         $departments = array(); $types = array();
         foreach ($jobs as $job) { if (self::open($job->ID)) { $d=self::job_meta($job->ID,'department'); $t=self::job_meta($job->ID,'type'); if ($d) $departments[$d]=$d; if ($t) $types[$t]=$t; } }
@@ -364,7 +400,9 @@ final class Achuthan_Jobs {
         foreach($departments as $d) echo '<option value="'.esc_attr(strtolower($d)).'">'.esc_html($d).'</option>';
         echo '</select></label><label><span class="screen-reader-text">Employment type</span><select data-bbs-filter="type"><option value="">All job types</option>';
         foreach($types as $t) echo '<option value="'.esc_attr(strtolower($t)).'">'.esc_html($t).'</option>';
-        echo '</select></label></div><div class="bbs-cards">';
+        echo '</select></label></div>';
+        }
+        echo '<div class="bbs-cards">';
         $count=0;
         foreach($jobs as $job) {
             if (!self::open($job->ID)) continue;
@@ -385,7 +423,10 @@ final class Achuthan_Jobs {
     public static function live_jobs() {
         // Public endpoint contains only already-published job descriptions and links.
         nocache_headers();
-        wp_send_json_success(array('html'=>self::render_list()));
+        // Only boolean display options are accepted; this endpoint returns public jobs.
+        $heading=(!isset($_GET['heading']) || sanitize_key(wp_unslash($_GET['heading']))!=='0');
+        $filters=(!isset($_GET['filters']) || sanitize_key(wp_unslash($_GET['filters']))!=='0');
+        wp_send_json_success(array('html'=>self::render_list($heading,$filters)));
     }
     public static function fresh_application_form() {
         // Always deliver fresh nonces and timestamps, even behind page/CDN caching.
@@ -531,10 +572,13 @@ final class Achuthan_Jobs {
                 "Candidate: ".$name."\nRole: ".get_the_title($new['job'])."\nJob ID: ".self::job_code($new['job'])."\nView: ".admin_url('admin.php?page=bbs-applicants&view='.$new['application'])))
                 update_option('achuthan_jobs_mail_failed_at',$now,false);
         }
-        if($inserted){
-            $titles=array_map(static function($item){return get_the_title($item['job']);},$inserted);
-            if(!wp_mail($email,'Applications received — '.self::employer_name(),"Hi ".$name.",\n\nWe received your application for: ".implode(', ',$titles).".\n\n".self::employer_name()))
+        // Each newly-created application gets the acknowledgement configured for its own role.
+        // A multi-job submission therefore uses each job's independent template.
+        foreach($inserted as $new) {
+            if(!Achuthan_Mailer::acknowledge($email,$name,$new['job'],$new['application'])) {
                 update_option('achuthan_jobs_mail_failed_at',$now,false);
+                self::audit('acknowledgement_failed',$new['application']);
+            } else self::audit('acknowledgement_queued',$new['application']);
         }
         self::apply_redirect($id,'success');
     }
@@ -655,11 +699,12 @@ final class Achuthan_Jobs {
         $person=$wpdb->get_row($wpdb->prepare('SELECT id, job_id, full_name, email FROM '.self::table().' WHERE id=%d',$id));
         if(!$person || !is_email($person->email)) { echo '<div class="notice notice-error inline"><p>Candidate not found.</p></div>'; return; }
         echo '<section class="aj-white-card aj-compose-card" id="aj-compose"><div class="aj-panel-heading"><div><h2>Email applicant</h2><p>Write directly to '.esc_html($person->full_name).' ('.esc_html($person->email).') about '.esc_html(get_the_title($person->job_id)).'.</p></div><a href="'.esc_url($base).'">Close ×</a></div>';
-        echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'" class="aj-compose-form"><input type="hidden" name="action" value="aj_candidate_email"><input type="hidden" name="return_to" value="dashboard"><input type="hidden" name="id" value="'.esc_attr($person->id).'">';
+        echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'" class="aj-compose-form" enctype="multipart/form-data"><input type="hidden" name="action" value="aj_candidate_email"><input type="hidden" name="return_to" value="dashboard"><input type="hidden" name="id" value="'.esc_attr($person->id).'">';
         wp_nonce_field('aj_candidate_email_'.$person->id);
         echo '<label><strong>Subject</strong><input type="text" required maxlength="150" name="subject" value="Regarding your application to '.esc_attr(self::employer_name()).'"></label>';
         echo '<label><strong>Message to '.esc_html($person->full_name).'</strong><textarea name="body" required maxlength="5000" rows="7" placeholder="Hi '.esc_attr($person->full_name).',"></textarea></label>';
-        echo '<p class="description">Messages are sent via your WordPress email service. Configure and test SMTP before using with real candidates.</p><button class="button button-primary" type="submit">Send email to applicant</button></form></section>';
+        echo Achuthan_Mailer::attachment_field();
+        echo '<p class="description">Messages use the configured HR sender and WordPress SMTP. Up to 3 secure file attachments, 3 MB each.</p><button class="button button-primary" type="submit">Send email to applicant</button></form></section>';
     }
     public static function dashboard() {
         self::require_hr();
@@ -769,10 +814,13 @@ final class Achuthan_Jobs {
         if($view) { self::applicant_detail($view); return; }
         $status=isset($_GET['stage'])?sanitize_key(wp_unslash($_GET['stage'])):'';
         if($status && !isset(self::stages()[$status])) $status='';
+        $elig=isset($_GET['eligibility'])?sanitize_key(wp_unslash($_GET['eligibility'])):'';
+        if($elig && !isset(Achuthan_Eligibility::labels()[$elig]))$elig='';
         $q=isset($_GET['s'])?sanitize_text_field(wp_unslash($_GET['s'])):'';
         $page=max(1,isset($_GET['paged'])?absint($_GET['paged']):1); $per=25;
         $where='1=1'; $args=array();
         if($status) { $where.=' AND stage=%s'; $args[]=$status; }
+        if($elig) { $where.=' AND eligibility_status=%s'; $args[]=$elig; }
         if($q) { $where.=' AND (full_name LIKE %s OR email LIKE %s)'; $like='%'.$wpdb->esc_like($q).'%'; $args[]=$like;$args[]=$like; }
         $total=(int)$wpdb->get_var($args?$wpdb->prepare("SELECT COUNT(*) FROM $table WHERE $where",$args):"SELECT COUNT(*) FROM $table WHERE $where");
         $sql="SELECT id, job_id, full_name, email, stage, eligibility_status, created_at, interview_at, candidate_rating FROM $table WHERE $where ORDER BY created_at DESC LIMIT %d OFFSET %d";
@@ -780,6 +828,8 @@ final class Achuthan_Jobs {
         echo '<div class="wrap bbs-admin"><div class="bbs-admin-head"><p>RECRUITMENT / HR</p><h1>Applications</h1><span>'.esc_html($total).' candidate records match your filters</span></div>';
         echo '<form method="get" class="bbs-table-filter"><input type="hidden" name="page" value="bbs-applicants"><input type="search" name="s" value="'.esc_attr($q).'" placeholder="Search name or email"><select name="stage"><option value="">All stages</option>';
         foreach(self::stages() as $key=>$label) echo '<option value="'.esc_attr($key).'" '.selected($status,$key,false).'>'.esc_html($label).'</option>';
+        echo '</select><select name="eligibility"><option value="">All eligibility flags</option>';
+        foreach(Achuthan_Eligibility::labels() as $code=>$label) echo '<option value="'.esc_attr($code).'" '.selected($elig,$code,false).'>'.esc_html($label).'</option>';
         echo '</select><button class="button button-primary">Filter</button></form>';
         echo '<form id="aj-app-bulk" method="post" action="'.esc_url(admin_url('admin-post.php')).'" onsubmit="return this.elements.bulk_action.value!==&quot;delete&quot; || confirm(&quot;Permanently delete selected applications and resumes? This cannot be undone.&quot;)"><input type="hidden" name="action" value="aj_candidates_bulk">';
         wp_nonce_field('aj_candidates_bulk');
@@ -802,7 +852,7 @@ final class Achuthan_Jobs {
         wp_nonce_field('aj_candidates_export');
         echo '<button class="button" type="submit">Export applications (CSV, authorised HR only)</button> <span class="description">Export excludes internal notes and resumes. Protect downloaded files.</span></form>';
         echo '<script>document.addEventListener("DOMContentLoaded",function(){var a=document.getElementById("aj-app-select-all");if(a)a.addEventListener("change",function(){document.querySelectorAll(".aj-app-check").forEach(function(x){x.checked=a.checked;});});});</script>';
-        if($total>$per) { echo '<div class="bbs-pages">';for($p=1;$p<=ceil($total/$per);$p++) echo '<a class="button '.($p===$page?'button-primary':'').'" href="'.esc_url(add_query_arg(array('page'=>'bbs-applicants','paged'=>$p,'stage'=>$status,'s'=>$q),admin_url('admin.php'))).'">'.esc_html($p).'</a> ';echo '</div>'; }
+        if($total>$per) { echo '<div class="bbs-pages">';for($p=1;$p<=ceil($total/$per);$p++) echo '<a class="button '.($p===$page?'button-primary':'').'" href="'.esc_url(add_query_arg(array('page'=>'bbs-applicants','paged'=>$p,'stage'=>$status,'eligibility'=>$elig,'s'=>$q),admin_url('admin.php'))).'">'.esc_html($p).'</a> ';echo '</div>'; }
         echo '</div>';
     }
     private static function applicant_detail($id) {
@@ -839,9 +889,9 @@ final class Achuthan_Jobs {
         echo '</select></label><label><strong>Candidate rating (0–5)</strong><input type="number" name="candidate_rating" min="0" max="5" step="1" value="'.esc_attr((int)$r->candidate_rating).'"></label><label><strong>Interview date</strong><input type="date" name="interview_at" value="'.esc_attr($r->interview_at).'" /></label><label><strong>Interview time (24-hour)</strong><input type="time" name="interview_time" value="'.esc_attr($r->interview_time).'" /></label><label><strong>Interview mode</strong><select name="interview_mode">';
         foreach(array(''=>'Not set','In person'=>'In person','Video call'=>'Video call','Phone'=>'Phone') as $key=>$label) echo '<option value="'.esc_attr($key).'" '.selected($r->interview_mode,$key,false).'>'.esc_html($label).'</option>';
         echo '</select></label><label><strong>Offer salary (HR private)</strong><input type="text" maxlength="100" name="offer_salary" value="'.esc_attr($r->offer_salary).'" /></label><label><strong>Proposed joining date</strong><input type="date" name="joining_date" value="'.esc_attr($r->joining_date).'" /></label><label><strong>Private HR notes</strong><textarea rows="12" name="notes">'.esc_textarea($r->notes).'</textarea></label><button class="button button-primary">Save candidate</button></form>';
-        echo '<hr><h2>Contact candidate</h2><p>Send a manual message to the candidate. No automated rejection, offer, or interview emails are sent when you change stages.</p><form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="aj_candidate_email"><input type="hidden" name="id" value="'.esc_attr($id).'">';
+        echo '<hr><h2>Contact candidate</h2><p>Send a manual message to the candidate. No automated rejection, offer, or interview emails are sent when you change stages.</p><form method="post" enctype="multipart/form-data" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="aj_candidate_email"><input type="hidden" name="id" value="'.esc_attr($id).'">';
         wp_nonce_field('aj_candidate_email_'.$id);
-        echo '<label><strong>Subject</strong><input type="text" name="subject" required maxlength="150" value="Regarding your application to '.esc_attr(self::employer_name()).'"></label><label><strong>Message</strong><textarea name="body" rows="6" maxlength="5000" required></textarea></label><button class="button">Send candidate email</button></form>';
+        echo '<label><strong>Subject</strong><input type="text" name="subject" required maxlength="150" value="Regarding your application to '.esc_attr(self::employer_name()).'"></label><label><strong>Message</strong><textarea name="body" rows="6" maxlength="5000" required></textarea></label>'.Achuthan_Mailer::attachment_field().'<button class="button">Send candidate email with optional attachments</button></form>';
         echo '<hr><form method="post" action="'.esc_url(admin_url('admin-post.php')).'" onsubmit="return confirm(\'Permanently delete this application, its resume and custom attachments? Other applications by this person will remain. This cannot be undone.\');"><input type="hidden" name="action" value="bbs_delete_applicant"><input type="hidden" name="id" value="'.esc_attr($id).'">';
         wp_nonce_field('bbs_delete_'.$id);
         echo '<button type="submit" class="button button-link-delete">Permanently delete application</button></form></div></div></div>';
@@ -1146,7 +1196,9 @@ final class Achuthan_Jobs {
         global $wpdb;
         $recipient=$wpdb->get_var($wpdb->prepare('SELECT email FROM '.self::table().' WHERE id=%d',$id));
         if(!$recipient || !is_email($recipient)) wp_die('Applicant not found.','',array('response'=>404));
-        if(!wp_mail($recipient,$subject,$body)) wp_die('Email delivery failed; check SMTP.','',array('response'=>502));
+        $sent=Achuthan_Mailer::send_hr_message($recipient,$subject,$body,$_FILES['aj_mail_attachments']??null);
+        if(is_wp_error($sent)) wp_die(esc_html($sent->get_error_message()),'',array('response'=>400));
+        if(!$sent) wp_die('Email could not be accepted by WordPress mail transport; check SMTP.','',array('response'=>502));
         self::audit('candidate_emailed',$id);
         if(self::data('return_to')==='dashboard') {
             wp_safe_redirect(add_query_arg('email_sent','1',admin_url('admin.php?page=bbs-recruitment')),303);
@@ -1184,7 +1236,20 @@ final class Achuthan_Jobs {
         wp_nonce_field('bbs_save_settings');
         echo '<label><strong>Employer / hiring organisation name</strong><input type="text" name="employer_name" maxlength="150" required value="'.esc_attr(self::employer_name()).'"></label>';
         echo '<label><strong>Country (ISO two-letter code, optional)</strong><input type="text" maxlength="2" name="employer_country" placeholder="US, IN, GB, AU..." value="'.esc_attr(self::country()).'"></label>';
-        echo '<label><strong>Recruitment notification email</strong><input type="email" name="hr_email" value="'.esc_attr($email).'" required></label><label><strong>Candidate data retention (days)</strong><input type="number" min="30" max="1095" name="retention_days" value="'.esc_attr($days).'" required></label><p><label><input type="checkbox" name="aj_own_careers_page" value="1" '.checked(get_option('aj_own_careers_page','1'),'1',false).'> <strong>Automatically control /careers/ with Achuthan Jobs</strong></label></p><p class="description">Recommended and enabled by default. Published jobs always come from the plugin database, even if the previous Careers page used static Elementor sections. Disable this option only if you want to use the [achuthan_jobs] shortcode in Elementor yourself.</p><p>Old applications and their resumes are permanently deleted by the daily WordPress scheduled task. WordPress cron relies on site traffic unless a server cron is configured.</p><button class="button button-primary">Save settings</button></form></div><p><strong>Live Careers URL:</strong> <a href="'.esc_url(home_url('/careers/')).'" target="_blank" rel="noopener">'.esc_html(home_url('/careers/')).'</a>. The WordPress page with slug <code>careers</code> must exist.</p><p><strong>Manual Elementor shortcode:</strong> <code>[achuthan_jobs]</code> (legacy <code>[bbs_careers]</code> also works) — used only if automatic Careers control is turned off.</p><p><strong>Privacy:</strong> Configure a Privacy Policy in Settings → Privacy, update recruitment data handling, and configure SMTP.</p></div>';
+        echo '<label><strong>Recruitment notification email (to HR)</strong><input type="email" name="hr_email" value="'.esc_attr($email).'" required></label>';
+        echo Achuthan_Mailer::settings_fields();
+        echo '<label><strong>Candidate data retention (days)</strong><input type="number" min="30" max="1095" name="retention_days" value="'.esc_attr($days).'" required></label>';
+        if ( current_user_can('manage_options') ) {
+            echo '<p><label><input type="checkbox" name="aj_github_auto_update" value="1" '.checked(get_option('aj_github_auto_update','1'),'1',false).'> <strong>Automatically install verified Achuthan Jobs GitHub releases</strong></label></p>';
+            echo '<p class="description">Checks the public GitHub Releases feed using WordPress core update checks; only published, non-prerelease releases with the official achuthan-jobs.zip asset and SHA-256 digest are eligible. WordPress cron and filesystem write access are required. New commits without a release do not deploy. Turn off on staging if you need to test updates manually.</p>';
+            echo '<p class="description"><strong>Mandatory administrator notice:</strong> A persistent warning appears across wp-admin whenever a verified newer GitHub release is available. The notice does not forcibly install an untested update; automatic installation uses the normal WordPress background updater.</p>';
+        }
+        echo '<p class="description"><strong>Elementor-compatible Careers page:</strong> WordPress now renders the original /careers/ Page using its own theme/Elementor template. Until a listing shortcode is inserted, a live jobs list is appended below the page to prevent blank job listings on upgrade. Build the layout with normal Elementor widgets and place <code>[achuthan_jobs_list]</code> where live openings should appear. The original <code>[achuthan_jobs]</code> still renders a complete prefabricated page.</p>';
+        $career_page=get_page_by_path('careers');
+        if ($career_page && current_user_can('edit_post',$career_page->ID)) {
+            echo '<p><a class="button" href="'.esc_url(admin_url('post.php?post='.absint($career_page->ID).'&action=elementor')).'">Edit Careers in Elementor</a> <a class="button" href="'.esc_url(get_edit_post_link($career_page->ID)).'">Edit in WordPress</a></p>';
+        }
+        echo '<p>Old applications and their resumes are permanently deleted by the daily WordPress scheduled task. WordPress cron relies on site traffic unless a server cron is configured.</p><button class="button button-primary">Save settings</button></form></div><p><strong>Live Careers URL:</strong> <a href="'.esc_url(home_url('/careers/')).'" target="_blank" rel="noopener">'.esc_html(home_url('/careers/')).'</a>. Create a WordPress page with the slug <code>careers</code> if it does not yet exist.</p><p><strong>Elementor shortcode:</strong> <code>[achuthan_jobs_list]</code> for jobs only; <code>[achuthan_jobs_list heading="no" filters="yes"]</code> for just the cards and search filters; <code>[achuthan_jobs]</code> for the full ready-made page.</p><p><strong>Privacy:</strong> Configure a Privacy Policy in Settings → Privacy, update recruitment data handling, and configure SMTP.</p></div>';
     }
     public static function save_settings() {
         self::require_hr();self::require_post();check_admin_referer('bbs_save_settings');
@@ -1196,7 +1261,9 @@ final class Achuthan_Jobs {
         if(!$employer||strlen($employer)>150||($country!==''&&!preg_match('/^[A-Z]{2}$/D',$country)))wp_die('Invalid employer details.','',array('response'=>400));
         update_option('aj_employer_name',$employer);update_option('aj_employer_country',$country);
         update_option('bbs_hr_email',$email);update_option('bbs_retention_days',$days);
-        update_option('aj_own_careers_page',isset($_POST['aj_own_careers_page']) && $_POST['aj_own_careers_page']==='1' ? '1':'0');
+        Achuthan_Mailer::save_settings();
+        if (current_user_can('manage_options')) update_option('aj_github_auto_update', isset($_POST['aj_github_auto_update']) && $_POST['aj_github_auto_update']==='1' ? '1' : '0');
+        // Legacy /careers/ template takeover is removed. Elementor always owns Page content.
         wp_safe_redirect(admin_url('admin.php?page=bbs-recruitment-settings&saved=1'));exit;
     }
     public static function cleanup() {
@@ -1276,6 +1343,9 @@ final class Achuthan_Jobs {
 }
 require_once __DIR__.'/includes/class-achuthan-questions.php';
 require_once __DIR__.'/includes/class-achuthan-eligibility.php';
+require_once __DIR__.'/includes/class-achuthan-mailer.php';
 register_activation_hook(__FILE__,array('Achuthan_Jobs','activate'));
 register_deactivation_hook(__FILE__,array('Achuthan_Jobs','deactivate'));
 Achuthan_Jobs::init();
+require_once __DIR__ . '/includes/class-achuthan-github-updater.php';
+Achuthan_Github_Updater::boot(__FILE__, Achuthan_Jobs::VERSION);
